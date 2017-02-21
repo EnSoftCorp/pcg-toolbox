@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   
+   <!-- Add the PCG Builder view -->
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            category="com.ensoftcorp.open.commons.views.categories.toolbox"
+            class="org.rulersoftware.pcg.ui.PCGBuilderView"
+            icon="icons/toolbox.gif"
+            id="org.rulersoftware.pcg.ui.pcgBuilderView"
+            name="PCG Builder">
+      </view>
+   </extension>
+
+</plugin>
