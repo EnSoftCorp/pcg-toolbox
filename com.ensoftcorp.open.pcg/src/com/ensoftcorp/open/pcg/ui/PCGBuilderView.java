@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabFolder2Adapter;
@@ -47,7 +48,6 @@ import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.factory.IPCGFactory;
 
-@SuppressWarnings("restriction")
 public class PCGBuilderView extends ViewPart {
 
 	/**
@@ -125,12 +125,12 @@ public class PCGBuilderView extends ViewPart {
 			}
 		};
 		addPCGAction.setText("New PCG");
-		//TODO: implement
-//		addPCGAction.setToolTipText("Creates another PCG builder tab");
-//		addPCGAction.setImageDescriptor(DebugPluginImages.getImageDescriptor(IInternalDebugUIConstants.IMG_ELCL_NEW_CONFIG));
-//		addPCGAction.setDisabledImageDescriptor(DebugPluginImages.getImageDescriptor(IInternalDebugUIConstants.IMG_ELCL_NEW_CONFIG));
-//		addPCGAction.setHoverImageDescriptor(DebugPluginImages.getImageDescriptor(IInternalDebugUIConstants.IMG_ELCL_NEW_CONFIG));
-//		getViewSite().getActionBars().getToolBarManager().add(addPCGAction);
+		addPCGAction.setToolTipText("Creates another PCG builder tab");
+		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		addPCGAction.setImageDescriptor(newConfigurationIcon);
+		addPCGAction.setDisabledImageDescriptor(newConfigurationIcon);
+		addPCGAction.setHoverImageDescriptor(newConfigurationIcon);
+		getViewSite().getActionBars().getToolBarManager().add(addPCGAction);
 		
 		// setup the Atlas selection event listener
 		IAtlasSelectionListener selectionListener = new IAtlasSelectionListener(){
