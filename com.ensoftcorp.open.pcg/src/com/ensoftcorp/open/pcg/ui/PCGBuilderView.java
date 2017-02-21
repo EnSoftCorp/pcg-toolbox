@@ -53,7 +53,7 @@ public class PCGBuilderView extends ViewPart {
 	/**
 	 * The ID of the view as specified by the extension.
 	 */
-	public static final String ID = "org.rulersoftware.pcg.ui.pcgBuilderView";
+	public static final String ID = "com.ensoftcorp.open.pcg.ui.pcgBuilderView";
 	
 	// the current Atlas selection
 	private AtlasSet<Node> selection =  new AtlasHashSet<Node>();
@@ -126,7 +126,7 @@ public class PCGBuilderView extends ViewPart {
 		};
 		addPCGAction.setText("New PCG");
 		addPCGAction.setToolTipText("Creates another PCG builder tab");
-		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/new_configuration_button.png"));
 		addPCGAction.setImageDescriptor(newConfigurationIcon);
 		addPCGAction.setDisabledImageDescriptor(newConfigurationIcon);
 		addPCGAction.setHoverImageDescriptor(newConfigurationIcon);

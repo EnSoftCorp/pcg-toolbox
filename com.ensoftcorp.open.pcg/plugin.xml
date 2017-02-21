@@ -7,11 +7,22 @@
          point="org.eclipse.ui.views">
       <view
             category="com.ensoftcorp.open.commons.views.categories.toolbox"
-            class="org.rulersoftware.pcg.ui.PCGBuilderView"
+            class="com.ensoftcorp.open.pcg.ui.PCGBuilderView"
             icon="icons/toolbox.gif"
-            id="org.rulersoftware.pcg.ui.pcgBuilderView"
+            id="com.ensoftcorp.open.pcg.ui.pcgBuilderView"
             name="PCG Builder">
       </view>
+   </extension>
+   
+   <!-- Add the PCG Smart Views -->
+   <extension
+         point="com.ensoftcorp.atlas.ui.smartViewScript">
+      <script
+            class="com.ensoftcorp.open.pcg.ui.smart.PCGSmartView">
+      </script>
+      <script
+            class="com.ensoftcorp.open.pcg.ui.smart.ExceptionalPCGSmartView">
+      </script>
    </extension>
 
 </plugin>

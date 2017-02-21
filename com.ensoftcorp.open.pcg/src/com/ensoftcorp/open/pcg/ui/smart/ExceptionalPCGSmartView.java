@@ -16,7 +16,7 @@ package com.ensoftcorp.open.pcg.ui.smart;
  * BLUE  = ExceptionalControlFlow_Edges
  * CYAN  = events (ControlFlow_Node, DataFlow_Node)
  */
-public class ExceptionalPCGView extends PCGSmartView {
+public class ExceptionalPCGSmartView extends PCGSmartView {
 
 	@Override
 	public String getTitle() {
