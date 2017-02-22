@@ -10,6 +10,7 @@ import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
@@ -130,20 +131,22 @@ public class IPCGFactory {
 			// further to those reachable from the entry point 
 			if(CommonQueries.isEmpty(revCalls)) {
 				methods = entryMethods.forwardOn(callEdges);
-			} 
-			methods = revCalls.intersection(entryMethods.forwardOn(callEdges));
-		}
-		Q iPCG = IPCG.getIPCG(methods.nodesTaggedWithAny(XCSG.Method), events);
-		
-		Markup m = new Markup();
-		Q iPCGEdgesToExit = Common.empty();
-		for(GraphElement ge : iPCG.eval().edges()) {
-			GraphElement to = ge.getNode(EdgeDirection.TO);
-			if(to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
-				iPCGEdgesToExit = iPCGEdgesToExit.union(Common.toQ(ge));
+			} else {
+				methods = revCalls.intersection(entryMethods.forwardOn(callEdges));
 			}
 		}
-		m.setEdge(iPCGEdgesToExit, MarkupProperty.EDGE_COLOR, Color.GRAY);
+		Q iPCG = IPCG.getIPCG(methods.nodesTaggedWithAny(XCSG.Function), events);
+		
+		return iPCG;
+	}
+	
+	public static Q getIPCGFromEvents(Q explicitMethods, Q events){
+		
+		Q containingMethods = StandardQueries.getContainingFunctions(events);
+		Q methods = explicitMethods.union(containingMethods);
+		
+		Q iPCG = IPCG.getIPCG(methods.nodesTaggedWithAny(XCSG.Function), events);
+		
 		return iPCG;
 	}
 	
