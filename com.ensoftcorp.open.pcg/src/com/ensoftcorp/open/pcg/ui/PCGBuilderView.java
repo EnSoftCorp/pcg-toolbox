@@ -1,5 +1,6 @@
 package com.ensoftcorp.open.pcg.ui;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,9 +35,12 @@ import org.eclipse.wb.swt.ResourceManager;
 import org.eclipse.wb.swt.SWTResourceManager;
 
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
+import com.ensoftcorp.atlas.core.markup.Markup;
+import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.CommonQueries;
@@ -435,13 +439,46 @@ public class PCGBuilderView extends ViewPart {
 					Q methods2 = Common.toQ(pcg.getDifferentiatingCallsitesSetB());
 					Q events = Common.toQ(pcg.getControlFlowEvents());
 					Q pcgResult = IPCGFactory.getIPCGFromInteractions(entryMethods, methods1, methods2, events);
-					DisplayUtils.show(pcgResult, pcg.getName());
+					Markup pcgResultMarkup = getIPCGMarkup(pcgResult, entryMethods, methods1, methods2, events);
+					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
 		});
 		
 		// set the tab selection to this newly created tab
 		pcgFolder.setSelection(pcgFolder.getItemCount()-1);
+	}
+	
+	public static Markup getIPCGMarkup(Q ipcg, Q entryMethods, Q methods1, Q methods2, Q events) {
+		
+		Markup m = new Markup();
+		
+		Q iPCGEdgesEntryOrExit = Common.empty();
+		Q iPCGEdgesMethods1 = Common.empty();
+		Q iPCGEdgesMethods2 = Common.empty();
+		
+		for(GraphElement ge : ipcg.eval().edges()) {
+			GraphElement from = ge.getNode(EdgeDirection.FROM);
+			GraphElement to = ge.getNode(EdgeDirection.TO);
+			if(from.taggedWith("EventFlow_Master_Entry") || to.taggedWith("EventFlow_Master_Exit")) {
+				iPCGEdgesEntryOrExit = iPCGEdgesEntryOrExit.union(Common.toQ(ge));
+			}
+			if(methods1.contained().eval().nodes().contains(to)) {
+				iPCGEdgesMethods1 = iPCGEdgesMethods1.union(Common.toQ(ge));
+			}
+			if(methods2.contained().eval().nodes().contains(to)) {
+				iPCGEdgesMethods2 = iPCGEdgesMethods2.union(Common.toQ(ge));
+			}
+		}
+		
+		m.setEdge(iPCGEdgesEntryOrExit, MarkupProperty.EDGE_COLOR, Color.GRAY);
+		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_COLOR, Color.YELLOW.brighter());
+		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_WEIGHT, new Integer(2));
+		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_COLOR, Color.MAGENTA.brighter());
+		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_WEIGHT, new Integer(2));
+		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+		
+		return m;
 	}
 	
 	/**
