@@ -210,7 +210,7 @@ public class PCGBuilderView extends ViewPart {
 		final Label addCallGraphElementButton = new Label(addCallGraphElementComposite, SWT.NONE);
 		addCallGraphElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		addCallGraphElementButton.setSize(20, 20);
-		addCallGraphElementButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		addCallGraphElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
 		final ScrolledComposite entryFunctionsScrolledComposite = new ScrolledComposite(entryFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		entryFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
@@ -243,7 +243,7 @@ public class PCGBuilderView extends ViewPart {
 		addDifferentiatingFunctionSetAElementLabel.setText("Add Selected");
 		
 		Label addDifferentiatingFunctionSetAElementButton = new Label(functionSetAComposite, SWT.NONE);
-		addDifferentiatingFunctionSetAElementButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		addDifferentiatingFunctionSetAElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		addDifferentiatingFunctionSetAElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		
 		final ScrolledComposite functionSetAEventsScrolledComposite = new ScrolledComposite(functionSetAGroup, SWT.H_SCROLL | SWT.V_SCROLL);
@@ -267,7 +267,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		Label addDifferentiatingFunctionSetBElementButton = new Label(functionSetBComposite, SWT.NONE);
 		addDifferentiatingFunctionSetBElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		addDifferentiatingFunctionSetBElementButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		addDifferentiatingFunctionSetBElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
 		final ScrolledComposite functionSetBEventsScrolledComposite = new ScrolledComposite(functionSetBGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		functionSetBEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
@@ -289,7 +289,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		Label addControlFlowEventsElementButton = new Label(addControlFlowEventsElementComposite, SWT.NONE);
 		addControlFlowEventsElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		addControlFlowEventsElementButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/add_button.png"));
+		addControlFlowEventsElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
 		final ScrolledComposite controlFlowEventsScrolledComposite = new ScrolledComposite(controlFlowEventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		controlFlowEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
@@ -517,7 +517,7 @@ public class PCGBuilderView extends ViewPart {
 			
 			final Label deleteButton = new Label(entryFunctionsEntryComposite, SWT.NONE);
 			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/delete_button.png"));
+			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label functionLabel = new Label(entryFunctionsEntryComposite, SWT.NONE);
 			functionLabel.setToolTipText(function.toString());
@@ -576,7 +576,7 @@ public class PCGBuilderView extends ViewPart {
 			
 			final Label deleteButton = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
 			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/delete_button.png"));
+			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label functionLabel = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
 			functionLabel.setToolTipText(function.toString());
@@ -610,7 +610,7 @@ public class PCGBuilderView extends ViewPart {
 			
 			final Label deleteButton = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
 			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/delete_button.png"));
+			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label functionLabel = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
 			functionLabel.setToolTipText(function.toString());
@@ -644,7 +644,7 @@ public class PCGBuilderView extends ViewPart {
 			
 			final Label deleteButton = new Label(controlFlowEventsEntryComposite, SWT.NONE);
 			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("org.rulersoftware.pcg", "icons/delete_button.png"));
+			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label eventLabel = new Label(controlFlowEventsEntryComposite, SWT.NONE);
 			eventLabel.setToolTipText(event.toString());
