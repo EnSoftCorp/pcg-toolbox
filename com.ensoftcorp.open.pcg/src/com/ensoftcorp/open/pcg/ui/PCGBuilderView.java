@@ -50,6 +50,7 @@ import com.ensoftcorp.atlas.ui.selection.SelectionUtil;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
+import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 import com.ensoftcorp.open.pcg.factory.IPCGFactory;
 
 public class PCGBuilderView extends ViewPart {
@@ -60,7 +61,7 @@ public class PCGBuilderView extends ViewPart {
 	public static final String ID = "com.ensoftcorp.open.pcg.ui.pcgBuilderView";
 	
 	// the current Atlas selection
-	private AtlasSet<Node> selection =  new AtlasHashSet<Node>();
+	private AtlasSet<Node> selection = new AtlasHashSet<Node>();
 
 	private static Map<String,PCGComponents> pcgs = new HashMap<String,PCGComponents>();
 	
@@ -222,64 +223,7 @@ public class PCGBuilderView extends ViewPart {
 		eventsGroup.setText("Events");
 		eventsGroup.setLayout(new GridLayout(1, false));
 		
-		SashForm sashForm = new SashForm(eventsGroup, SWT.VERTICAL);
-		sashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		
-		Group differentiatingCallsitesGroup = new Group(sashForm, SWT.NONE);
-		differentiatingCallsitesGroup.setLayout(new GridLayout(2, false));
-		differentiatingCallsitesGroup.setText("Differentiating Callsites");
-		
-		Group functionSetAGroup = new Group(differentiatingCallsitesGroup, SWT.NONE);
-		functionSetAGroup.setLayout(new GridLayout(1, false));
-		functionSetAGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		functionSetAGroup.setText("Function Set A");
-		
-		Composite functionSetAComposite = new Composite(functionSetAGroup, SWT.NONE);
-		functionSetAComposite.setLayout(new GridLayout(2, false));
-		functionSetAComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-		
-		Label addDifferentiatingFunctionSetAElementLabel = new Label(functionSetAComposite, SWT.NONE);
-		addDifferentiatingFunctionSetAElementLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
-		addDifferentiatingFunctionSetAElementLabel.setText("Add Selected");
-		
-		Label addDifferentiatingFunctionSetAElementButton = new Label(functionSetAComposite, SWT.NONE);
-		addDifferentiatingFunctionSetAElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
-		addDifferentiatingFunctionSetAElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		
-		final ScrolledComposite functionSetAEventsScrolledComposite = new ScrolledComposite(functionSetAGroup, SWT.H_SCROLL | SWT.V_SCROLL);
-		functionSetAEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
-		functionSetAEventsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		functionSetAEventsScrolledComposite.setExpandHorizontal(true);
-		functionSetAEventsScrolledComposite.setExpandVertical(true);
-		
-		Group functionSetBGroup = new Group(differentiatingCallsitesGroup, SWT.NONE);
-		functionSetBGroup.setLayout(new GridLayout(1, false));
-		functionSetBGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		functionSetBGroup.setText("Function Set B");
-		
-		Composite functionSetBComposite = new Composite(functionSetBGroup, SWT.NONE);
-		functionSetBComposite.setLayout(new GridLayout(2, false));
-		functionSetBComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-		
-		Label addDifferentiatingFunctionSetBElementLabel = new Label(functionSetBComposite, SWT.NONE);
-		addDifferentiatingFunctionSetBElementLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
-		addDifferentiatingFunctionSetBElementLabel.setText("Add Selected");
-		
-		Label addDifferentiatingFunctionSetBElementButton = new Label(functionSetBComposite, SWT.NONE);
-		addDifferentiatingFunctionSetBElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		addDifferentiatingFunctionSetBElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
-		
-		final ScrolledComposite functionSetBEventsScrolledComposite = new ScrolledComposite(functionSetBGroup, SWT.H_SCROLL | SWT.V_SCROLL);
-		functionSetBEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
-		functionSetBEventsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		functionSetBEventsScrolledComposite.setExpandHorizontal(true);
-		functionSetBEventsScrolledComposite.setExpandVertical(true);
-		
-		Group controlFlowEventsGroup = new Group(sashForm, SWT.NONE);
-		controlFlowEventsGroup.setText("Control Flow Events");
-		controlFlowEventsGroup.setLayout(new GridLayout(1, false));
-		
-		Composite addControlFlowEventsElementComposite = new Composite(controlFlowEventsGroup, SWT.NONE);
+		Composite addControlFlowEventsElementComposite = new Composite(eventsGroup, SWT.NONE);
 		addControlFlowEventsElementComposite.setLayout(new GridLayout(2, false));
 		addControlFlowEventsElementComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
 		
@@ -291,12 +235,11 @@ public class PCGBuilderView extends ViewPart {
 		addControlFlowEventsElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		addControlFlowEventsElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
-		final ScrolledComposite controlFlowEventsScrolledComposite = new ScrolledComposite(controlFlowEventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		final ScrolledComposite controlFlowEventsScrolledComposite = new ScrolledComposite(eventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		controlFlowEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		controlFlowEventsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		controlFlowEventsScrolledComposite.setExpandHorizontal(true);
 		controlFlowEventsScrolledComposite.setExpandVertical(true);
-		sashForm.setWeights(new int[] {1, 1});
 		groupSashForm.setWeights(new int[] {250, 441});
 		
 		addCallGraphElementButton.addMouseListener(new MouseAdapter() {
@@ -311,82 +254,6 @@ public class PCGBuilderView extends ViewPart {
 					} else {
 						if(pcg.addCallGraphFunctions(functions)){
 							refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-						}
-					}
-				}
-			}
-		});
-		
-		addDifferentiatingFunctionSetAElementButton.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseUp(MouseEvent e) {
-				if(selection.isEmpty()){
-					DisplayUtils.showError("Nothing is selected.");
-				} else {
-					AtlasSet<Node> functions = getFilteredSelections(XCSG.Function);
-					
-					// expand search to directly selected callsites
-					// note Atlas actually gives us the resolved function targets through the selection
-					// so we will just use it to get the containing methods
-					AtlasSet<Node> callsites = getFilteredSelections(XCSG.CallSite);
-
-					if(functions.isEmpty()){
-						DisplayUtils.showError("Selections must be functions or function callsites.");
-					} else {
-						Q a = Common.toQ(pcg.getDifferentiatingCallsitesSetA()).union(Common.toQ(functions));
-						Q b = Common.toQ(pcg.getDifferentiatingCallsitesSetB());
-						if(!CommonQueries.isEmpty(a.intersection(b))){
-							DisplayUtils.showError("Sets A and B must be disjoint sets.");
-						} else {
-							if(pcg.addDifferentiatingCallsitesSetA(functions)){
-								refreshDifferentiatingCallsitesSetAElements(functionSetAEventsScrolledComposite, pcg);
-							}
-							// refresh and call graph context methods that may have changed
-							AtlasSet<Node> containingFunctions = new AtlasHashSet<Node>();
-							for(Node callsite : callsites){
-								containingFunctions.add(StandardQueries.getContainingFunction(callsite));
-							}
-							if(pcg.addCallGraphFunctions(containingFunctions)){
-								refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-							}
-						}
-					}
-				}
-			}
-		});
-		
-		addDifferentiatingFunctionSetBElementButton.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseUp(MouseEvent e) {
-				if(selection.isEmpty()){
-					DisplayUtils.showError("Nothing is selected.");
-				} else {
-					AtlasSet<Node> functions = getFilteredSelections(XCSG.Function);
-					
-					// expand search to directly selected callsites
-					// note Atlas actually gives us the resolved function targets through the selection
-					// so we will just use it to get the containing methods
-					AtlasSet<Node> callsites = getFilteredSelections(XCSG.CallSite);
-					
-					if(functions.isEmpty()){
-						DisplayUtils.showError("Selections must be functions.");
-					} else {
-						Q a = Common.toQ(pcg.getDifferentiatingCallsitesSetA());
-						Q b = Common.toQ(pcg.getDifferentiatingCallsitesSetB()).union(Common.toQ(functions));
-						if(!CommonQueries.isEmpty(a.intersection(b))){
-							DisplayUtils.showError("Sets A and B must be disjoint sets.");
-						} else {
-							if(pcg.addDifferentiatingCallsitesSetB(functions)){
-								refreshDifferentiatingCallsitesSetBElements(functionSetBEventsScrolledComposite, pcg);
-							}
-							// refresh and call graph context methods that may have changed
-							AtlasSet<Node> containingFunctions = new AtlasHashSet<Node>();
-							for(Node callsite : callsites){
-								containingFunctions.add(StandardQueries.getContainingFunction(callsite));
-							}
-							if(pcg.addCallGraphFunctions(containingFunctions)){
-								refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-							}
 						}
 					}
 				}
@@ -428,18 +295,18 @@ public class PCGBuilderView extends ViewPart {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean noControlFlowEvents = pcg.getControlFlowEvents().isEmpty();
-				boolean noDifferentiatingCallsiteEvents = pcg.getDifferentiatingCallsitesSetA().isEmpty() && pcg.getDifferentiatingCallsitesSetB().isEmpty();
-				if(noControlFlowEvents && noDifferentiatingCallsiteEvents){
-					DisplayUtils.showError("No control flow events or differentiating callsite events are defined.");
+				
+				if(noControlFlowEvents){
+					DisplayUtils.showError("No control flow events are defined.");
 				} else if(pcg.getCallGraphFunctions().isEmpty()){
 					DisplayUtils.showError("Call graph context cannot be empty.");
 				} else {
 					Q entryMethods = Common.toQ(pcg.getCallGraphFunctions());
-					Q methods1 = Common.toQ(pcg.getDifferentiatingCallsitesSetA());
-					Q methods2 = Common.toQ(pcg.getDifferentiatingCallsitesSetB());
+					
+					// TODO: implement
 					Q events = Common.toQ(pcg.getControlFlowEvents());
-					Q pcgResult = IPCGFactory.getIPCGFromInteractions(entryMethods, methods1, methods2, events);
-					Markup pcgResultMarkup = getIPCGMarkup(pcgResult, entryMethods, methods1, methods2, events);
+					Q pcgResult = IPCGFactory.getIPCGFromEvents(entryMethods, events);
+					Markup pcgResultMarkup = getIPCGMarkup(pcgResult, entryMethods, events);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
@@ -449,7 +316,7 @@ public class PCGBuilderView extends ViewPart {
 		pcgFolder.setSelection(pcgFolder.getItemCount()-1);
 	}
 	
-	public static Markup getIPCGMarkup(Q ipcg, Q entryMethods, Q methods1, Q methods2, Q events) {
+	public static Markup getIPCGMarkup(Q ipcg, Q entryMethods, Q events) {
 		
 		Markup m = new Markup();
 		
@@ -460,14 +327,8 @@ public class PCGBuilderView extends ViewPart {
 		for(GraphElement ge : ipcg.eval().edges()) {
 			GraphElement from = ge.getNode(EdgeDirection.FROM);
 			GraphElement to = ge.getNode(EdgeDirection.TO);
-			if(from.taggedWith("EventFlow_Master_Entry") || to.taggedWith("EventFlow_Master_Exit")) {
+			if(from.taggedWith(PCGNode.EventFlow_Master_Entry) || to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
 				iPCGEdgesEntryOrExit = iPCGEdgesEntryOrExit.union(Common.toQ(ge));
-			}
-			if(methods1.contained().eval().nodes().contains(to)) {
-				iPCGEdgesMethods1 = iPCGEdgesMethods1.union(Common.toQ(ge));
-			}
-			if(methods2.contained().eval().nodes().contains(to)) {
-				iPCGEdgesMethods2 = iPCGEdgesMethods2.union(Common.toQ(ge));
 			}
 		}
 		
@@ -560,74 +421,6 @@ public class PCGBuilderView extends ViewPart {
 		}
 		entryFunctionsScrolledComposite.setContent(entryFunctionsScrolledCompositeContent);
 		entryFunctionsScrolledComposite.setMinSize(entryFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
-	}
-	
-	private void refreshDifferentiatingCallsitesSetAElements(final ScrolledComposite differentiatingCallsitesSetScrolledComposite, final PCGComponents pcg) {
-		Composite differentiatingCallsitesSetScrolledCompositeContent = new Composite(differentiatingCallsitesSetScrolledComposite, SWT.NONE);
-		for(final Node function : pcg.getDifferentiatingCallsitesSetA()){
-			differentiatingCallsitesSetScrolledCompositeContent.setLayout(new GridLayout(1, false));
-			
-			Label differentiatingCallsitesContextSeperatorLabel = new Label(differentiatingCallsitesSetScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
-			differentiatingCallsitesContextSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			
-			Composite differentiatingCallsitesContextEntryComposite = new Composite(differentiatingCallsitesSetScrolledCompositeContent, SWT.NONE);
-			differentiatingCallsitesContextEntryComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-			differentiatingCallsitesContextEntryComposite.setLayout(new GridLayout(2, false));
-			
-			final Label deleteButton = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
-			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
-
-			Label functionLabel = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
-			functionLabel.setToolTipText(function.toString());
-			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			functionLabel.setBounds(0, 0, 59, 14);
-			functionLabel.setText(StandardQueries.getQualifiedFunctionName(function));
-			
-			deleteButton.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseUp(MouseEvent e) {
-					pcg.removeDifferentiatingCallsiteSetA(function);
-					refreshDifferentiatingCallsitesSetAElements(differentiatingCallsitesSetScrolledComposite, pcg);
-				}
-			});
-		}
-		differentiatingCallsitesSetScrolledComposite.setContent(differentiatingCallsitesSetScrolledCompositeContent);
-		differentiatingCallsitesSetScrolledComposite.setMinSize(differentiatingCallsitesSetScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
-	}
-	
-	private void refreshDifferentiatingCallsitesSetBElements(final ScrolledComposite differentiatingCallsitesSetScrolledComposite, final PCGComponents pcg) {
-		Composite differentiatingCallsitesSetScrolledCompositeContent = new Composite(differentiatingCallsitesSetScrolledComposite, SWT.NONE);
-		for(final Node function : pcg.getDifferentiatingCallsitesSetB()){
-			differentiatingCallsitesSetScrolledCompositeContent.setLayout(new GridLayout(1, false));
-			
-			Label differentiatingCallsitesContextSeperatorLabel = new Label(differentiatingCallsitesSetScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
-			differentiatingCallsitesContextSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			
-			Composite differentiatingCallsitesContextEntryComposite = new Composite(differentiatingCallsitesSetScrolledCompositeContent, SWT.NONE);
-			differentiatingCallsitesContextEntryComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-			differentiatingCallsitesContextEntryComposite.setLayout(new GridLayout(2, false));
-			
-			final Label deleteButton = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
-			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
-
-			Label functionLabel = new Label(differentiatingCallsitesContextEntryComposite, SWT.NONE);
-			functionLabel.setToolTipText(function.toString());
-			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			functionLabel.setBounds(0, 0, 59, 14);
-			functionLabel.setText(StandardQueries.getQualifiedFunctionName(function));
-			
-			deleteButton.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseUp(MouseEvent e) {
-					pcg.removeDifferentiatingCallsiteSetB(function);
-					refreshDifferentiatingCallsitesSetBElements(differentiatingCallsitesSetScrolledComposite, pcg);
-				}
-			});
-		}
-		differentiatingCallsitesSetScrolledComposite.setContent(differentiatingCallsitesSetScrolledCompositeContent);
-		differentiatingCallsitesSetScrolledComposite.setMinSize(differentiatingCallsitesSetScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
 	private void refreshControlFlowEventElements(final ScrolledComposite controlFlowEventsScrolledComposite, final PCGComponents pcg) {
