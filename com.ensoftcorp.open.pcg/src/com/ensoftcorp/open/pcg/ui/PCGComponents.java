@@ -8,16 +8,12 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	private String name;
 	private long createdAt;
 	private AtlasSet<Node> callGraphFunctions;
-	private AtlasSet<Node> differentiatingCallsitesSetA;
-	private AtlasSet<Node> differentiatingCallsitesSetB;
 	private AtlasSet<Node> controlFlowEvents;
 
 	public PCGComponents(String name) {
 		this.name = name;
 		this.createdAt = System.currentTimeMillis();
 		this.callGraphFunctions = new AtlasHashSet<Node>();
-		this.differentiatingCallsitesSetA = new AtlasHashSet<Node>();
-		this.differentiatingCallsitesSetB = new AtlasHashSet<Node>();
 		this.controlFlowEvents = new AtlasHashSet<Node>();
 	}
 	
@@ -43,38 +39,6 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	
 	public boolean removeCallGraphFunction(Node callGraphFunction){
 		return this.callGraphFunctions.remove(callGraphFunction);
-	}
-
-	public AtlasSet<Node> getDifferentiatingCallsitesSetA() {
-		return differentiatingCallsitesSetA;
-	}
-
-	public void setDifferentiatingCallsitesSetA(AtlasSet<Node> differentiatingCallsitesSetA) {
-		this.differentiatingCallsitesSetA = differentiatingCallsitesSetA;
-	}
-	
-	public boolean addDifferentiatingCallsitesSetA(AtlasSet<Node> differentiatingCallsitesSetA) {
-		return this.differentiatingCallsitesSetA.addAll(differentiatingCallsitesSetA);
-	}
-	
-	public boolean removeDifferentiatingCallsiteSetA(Node differentiatingCallsiteSetA) {
-		return this.differentiatingCallsitesSetA.remove(differentiatingCallsiteSetA);
-	}
-
-	public AtlasSet<Node> getDifferentiatingCallsitesSetB() {
-		return differentiatingCallsitesSetB;
-	}
-
-	public void setDifferentiatingCallsitesSetB(AtlasSet<Node> differentiatingCallsitesSetB) {
-		this.differentiatingCallsitesSetB = differentiatingCallsitesSetB;
-	}
-	
-	public boolean addDifferentiatingCallsitesSetB(AtlasSet<Node> differentiatingCallsitesSetB) {
-		return this.differentiatingCallsitesSetB.addAll(differentiatingCallsitesSetB);
-	}
-	
-	public boolean removeDifferentiatingCallsiteSetB(Node differentiatingCallsiteSetB) {
-		return this.differentiatingCallsitesSetB.remove(differentiatingCallsiteSetB);
 	}
 
 	public AtlasSet<Node> getControlFlowEvents() {

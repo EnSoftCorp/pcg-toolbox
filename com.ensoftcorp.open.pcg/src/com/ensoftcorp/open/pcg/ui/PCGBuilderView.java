@@ -1,6 +1,5 @@
 package com.ensoftcorp.open.pcg.ui;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,22 +34,19 @@ import org.eclipse.wb.swt.ResourceManager;
 import org.eclipse.wb.swt.SWTResourceManager;
 
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
-import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.markup.Markup;
-import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
-import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.selection.IAtlasSelectionListener;
 import com.ensoftcorp.atlas.ui.selection.SelectionUtil;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
-import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
+import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.factory.IPCGFactory;
 
 public class PCGBuilderView extends ViewPart {
@@ -220,7 +216,7 @@ public class PCGBuilderView extends ViewPart {
 		entryFunctionsScrolledComposite.setExpandVertical(true);
 		
 		Group eventsGroup = new Group(groupSashForm, SWT.NONE);
-		eventsGroup.setText("Events");
+		eventsGroup.setText("Control Flow Events");
 		eventsGroup.setLayout(new GridLayout(1, false));
 		
 		Composite addControlFlowEventsElementComposite = new Composite(eventsGroup, SWT.NONE);
@@ -295,18 +291,15 @@ public class PCGBuilderView extends ViewPart {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean noControlFlowEvents = pcg.getControlFlowEvents().isEmpty();
-				
 				if(noControlFlowEvents){
 					DisplayUtils.showError("No control flow events are defined.");
 				} else if(pcg.getCallGraphFunctions().isEmpty()){
 					DisplayUtils.showError("Call graph context cannot be empty.");
 				} else {
 					Q entryMethods = Common.toQ(pcg.getCallGraphFunctions());
-					
-					// TODO: implement
 					Q events = Common.toQ(pcg.getControlFlowEvents());
 					Q pcgResult = IPCGFactory.getIPCGFromEvents(entryMethods, events);
-					Markup pcgResultMarkup = getIPCGMarkup(pcgResult, entryMethods, events);
+					Markup pcgResultMarkup = HighlighterUtils.getIPCGMarkup(pcgResult, entryMethods, events);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
@@ -314,32 +307,6 @@ public class PCGBuilderView extends ViewPart {
 		
 		// set the tab selection to this newly created tab
 		pcgFolder.setSelection(pcgFolder.getItemCount()-1);
-	}
-	
-	public static Markup getIPCGMarkup(Q ipcg, Q entryMethods, Q events) {
-		
-		Markup m = new Markup();
-		
-		Q iPCGEdgesEntryOrExit = Common.empty();
-		Q iPCGEdgesMethods1 = Common.empty();
-		Q iPCGEdgesMethods2 = Common.empty();
-		
-		for(GraphElement ge : ipcg.eval().edges()) {
-			GraphElement from = ge.getNode(EdgeDirection.FROM);
-			GraphElement to = ge.getNode(EdgeDirection.TO);
-			if(from.taggedWith(PCGNode.EventFlow_Master_Entry) || to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
-				iPCGEdgesEntryOrExit = iPCGEdgesEntryOrExit.union(Common.toQ(ge));
-			}
-		}
-		
-		m.setEdge(iPCGEdgesEntryOrExit, MarkupProperty.EDGE_COLOR, Color.GRAY);
-		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_COLOR, Color.YELLOW.brighter());
-		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_WEIGHT, new Integer(2));
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_COLOR, Color.MAGENTA.brighter());
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_WEIGHT, new Integer(2));
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
-		
-		return m;
 	}
 	
 	/**

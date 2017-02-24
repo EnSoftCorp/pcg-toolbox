@@ -39,8 +39,8 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 	}
 
 	@Override
-	public StyledResult selectionChanged(IAtlasSelectionEvent arg0) {
-		ControlFlowSelection cfSelection = ControlFlowSelection.processSelection(arg0);
+	public StyledResult selectionChanged(IAtlasSelectionEvent selected) {
+		ControlFlowSelection cfSelection = ControlFlowSelection.processSelection(selected);
 
 		Q methods = cfSelection.getImpliedMethods();
 		
