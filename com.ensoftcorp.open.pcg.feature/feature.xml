@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="com.ensoftcorp.open.pcg.feature"
+      label="PCG Toolbox"
+      version="3.0.15.qualifier"
+      provider-name="EnSoft Corp.">
+
+   <description url="https://ensoftcorp.github.io/pcg-toolbox">
+      The goal of path-sensitive analysis is to achieve accuracy by accounting precisely for the execution behavior along each path of a control flow graph (CFG). A practical adoption of PSA is hampered by two roadblocks: (a) the exponential growth of the number of CFG paths, and (b) the exponential complexity of a path feasibility check. We introduce projected control graph (PCG) as an optimal mathematical abstraction to address these roadblocks.
+
+The PCG follows from the simple observation that for any given analysis problem, the number of distinct relevant execution behaviors may be much smaller than the number of CFG paths. The PCG is a projection of the CFG to retain only the relevant execution behaviors and elide duplicate paths with identical execution behavior. A mathematical definition of PCG and an efficient algorithm to transform CFG to PCG are implemented in this utility.
+   </description>
+
+   <copyright url="https://ensoftcorp.github.io/pcg-toolbox">
+      Copyright (c) 2017 EnSoft Corp.
+   </copyright>
+
+   <license url="https://raw.githubusercontent.com/EnSoftCorp/pcg-toolbox/master/LICENSE">
+      The MIT License (MIT)
+
+Copyright (c) 2017 EnSoft Corp.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+   </license>
+
+   <url>
+      <update label="ensoftcorp.github.io" url="https://ensoftcorp.github.io/pcg-toolbox/updates/"/>
+      <discovery label="Atlas" url="http://download.ensoftcorp.com/atlas/eclipse"/>
+   </url>
+
+   <includes
+         id="com.ensoftcorp.open.commons.feature"
+         version="0.0.0"/>
+
+   <requires>
+      <import plugin="com.ensoftcorp.open.commons" version="3.0.15" match="greaterOrEqual"/>
+   </requires>
+
+   <plugin
+         id="com.ensoftcorp.open.pcg"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>
