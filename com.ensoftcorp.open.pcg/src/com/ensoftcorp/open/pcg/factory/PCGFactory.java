@@ -34,7 +34,7 @@ public class PCGFactory {
 	 * @param events
 	 * @return PCG
 	 */
-	public static Q PCGforFunction(Q function, Q events){
+	public static Q PCGForFunction(Q function, Q events){
 //		Q cfg = CFG.excfg(function);
 		Q cfg = CFG.cfg(function);
 		return PCG(cfg, events);

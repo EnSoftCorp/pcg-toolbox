@@ -68,7 +68,7 @@ public class IPCG {
 		//Get it's PCG with respect to events
 		Q iPCG = Common.empty();
 		for (GraphElement function: functions.eval().nodes()){
-			Q PCG = PCGFactory.PCGforFunction(Common.toQ(function), events);
+			Q PCG = PCGFactory.PCGForFunction(Common.toQ(function), events);
 			iPCG = iPCG.union(PCG);
 		}
 		
