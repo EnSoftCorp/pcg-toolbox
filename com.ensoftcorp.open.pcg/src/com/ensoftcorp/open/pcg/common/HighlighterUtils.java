@@ -46,14 +46,14 @@ public class HighlighterUtils {
 		m.setEdge(Query.universe().edgesTaggedWithAny(XCSG.ExceptionalControlFlow_Edge), MarkupProperty.EDGE_COLOR, cfgExceptional);
 	}
 	
-	public static Markup getIPCGMarkup(Q ipcg, Q entryMethods, Q events) {
+	public static Markup getIPCGMarkup(Q ipcg, Q entryFunctions, Q events) {
 		Markup m = new Markup();
 		
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 
 		Q iPCGEdgesEntryOrExit = Common.empty();
-		Q iPCGEdgesMethods1 = Common.empty();
-		Q iPCGEdgesMethods2 = Common.empty();
+		Q iPCGEdgesFunctions1 = Common.empty();
+		Q iPCGEdgesFunctions2 = Common.empty();
 		
 		for(GraphElement ge : ipcg.eval().edges()) {
 			GraphElement from = ge.getNode(EdgeDirection.FROM);
@@ -64,11 +64,11 @@ public class HighlighterUtils {
 		}
 		
 		m.setEdge(iPCGEdgesEntryOrExit, MarkupProperty.EDGE_COLOR, Color.GRAY);
-		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_COLOR, Color.YELLOW.brighter());
-		m.setEdge(iPCGEdgesMethods1, MarkupProperty.EDGE_WEIGHT, new Integer(2));
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_COLOR, Color.MAGENTA.brighter());
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_WEIGHT, new Integer(2));
-		m.setEdge(iPCGEdgesMethods2, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+		m.setEdge(iPCGEdgesFunctions1, MarkupProperty.EDGE_COLOR, Color.YELLOW.brighter());
+		m.setEdge(iPCGEdgesFunctions1, MarkupProperty.EDGE_WEIGHT, new Integer(2));
+		m.setEdge(iPCGEdgesFunctions2, MarkupProperty.EDGE_COLOR, Color.MAGENTA.brighter());
+		m.setEdge(iPCGEdgesFunctions2, MarkupProperty.EDGE_WEIGHT, new Integer(2));
+		m.setEdge(iPCGEdgesFunctions2, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
 
 		// highlight edges
 		applyHighlightsForCFEdges(m);

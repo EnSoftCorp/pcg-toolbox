@@ -296,10 +296,10 @@ public class PCGBuilderView extends ViewPart {
 				} else if(pcg.getCallGraphFunctions().isEmpty()){
 					DisplayUtils.showError("Call graph context cannot be empty.");
 				} else {
-					Q entryMethods = Common.toQ(pcg.getCallGraphFunctions());
+					Q entryFunctions = Common.toQ(pcg.getCallGraphFunctions());
 					Q events = Common.toQ(pcg.getControlFlowEvents());
-					Q pcgResult = IPCGFactory.getIPCGFromEvents(entryMethods, events);
-					Markup pcgResultMarkup = HighlighterUtils.getIPCGMarkup(pcgResult, entryMethods, events);
+					Q pcgResult = IPCGFactory.getIPCGFromEvents(entryFunctions, events);
+					Markup pcgResultMarkup = HighlighterUtils.getIPCGMarkup(pcgResult, entryFunctions, events);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
@@ -310,16 +310,16 @@ public class PCGBuilderView extends ViewPart {
 	}
 	
 	/**
-	 * Given a callsite this method returns the invoked method signature
+	 * Given a callsite this function returns the invoked function signature
 	 * @param callsite
 	 * @return
 	 */
-	public static Node getInvokedMethodSignature(GraphElement callsite) {
-		// XCSG.InvokedSignature connects a dynamic dispatch to its signature method
-		// XCSG.InvokedFunction connects a static dispatch to it actual target method
+	public static Node getInvokedFunctionSignature(GraphElement callsite) {
+		// XCSG.InvokedSignature connects a dynamic dispatch to its signature function
+		// XCSG.InvokedFunction connects a static dispatch to it actual target function
 		Q invokedEdges = Common.universe().edgesTaggedWithAny(XCSG.InvokedSignature, XCSG.InvokedFunction);
-		Node method = invokedEdges.successors(Common.toQ(callsite)).eval().nodes().getFirst();
-		return method;
+		Node function = invokedEdges.successors(Common.toQ(callsite)).eval().nodes().getFirst();
+		return function;
 	}
 	
 	private void refreshCallGraphElements(final Group entryFunctionsGroup, final ScrolledComposite entryFunctionsScrolledComposite, final ScrolledComposite controlFlowEventsScrolledComposite, final PCGComponents pcg) {

@@ -18,33 +18,33 @@ public class IPCGFactory {
 	
 	/**
 	 * Constructs the Inter-procedural PCG by including following events: 
-	 * Callsites of the following methods - union of the LEAVES of pairwise intersections of the reverse call graphs of (m1, m2) for each m1 and m2 in M
-	 * LCCA stands for Lowest Common Call Ancestor, i.e., the LEAVES of the intersection of reverse call chains of each pair (m1, m2) of methods.  
+	 * Callsites of the following functions - union of the LEAVES of pairwise intersections of the reverse call graphs of (m1, m2) for each m1 and m2 in M
+	 * LCCA stands for Lowest Common Call Ancestor, i.e., the LEAVES of the intersection of reverse call chains of each pair (m1, m2) of functions.  
 	 * 
-	 * @param methods set of methods M
+	 * @param functions set of functions M
 	 * @param events
 	 * @return
 	 */
-	public static Q getIPCGIncludingPairwiseLCCAs(Q methods, Q events){
+	public static Q getIPCGIncludingPairwiseLCCAs(Q functions, Q events){
 		Q callEdges = Common.edges(XCSG.Call);
 		
-		// Find the union of the leaves of the pairwise intersection of reverse call graphs from the methods
-		for (GraphElement method1: methods.eval().nodes()){
-			Q reverseCallForMethod1 = Common.toQ(method1).reverseOn(callEdges);
-			for (GraphElement method2: methods.eval().nodes()){
-				if(!method1.equals(method2)) {
-					Q reverseCallForMethod2 = Common.toQ(method2).reverseOn(callEdges);
+		// Find the union of the leaves of the pairwise intersection of reverse call graphs from the functions
+		for (GraphElement function1: functions.eval().nodes()){
+			Q reverseCallForFunction1 = Common.toQ(function1).reverseOn(callEdges);
+			for (GraphElement function2: functions.eval().nodes()){
+				if(!function1.equals(function2)) {
+					Q reverseCallForFunction2 = Common.toQ(function2).reverseOn(callEdges);
 					
-					// Intersection of the reverse call graphs of the pair of methods
-					Q intersectionOfReverseCallGraphs = reverseCallForMethod1.intersection(reverseCallForMethod2);
+					// Intersection of the reverse call graphs of the pair of functions
+					Q intersectionOfReverseCallGraphs = reverseCallForFunction1.intersection(reverseCallForFunction2);
 					
-					// Add the leaves from the pairwise intersection to the set of methods considered for creating IPCG
-					methods = methods.union(intersectionOfReverseCallGraphs.leaves());
-					// TODO : Leaves may have cycles. In that case, add all the methods in the leaf SCC to methods  
+					// Add the leaves from the pairwise intersection to the set of functions considered for creating IPCG
+					functions = functions.union(intersectionOfReverseCallGraphs.leaves());
+					// TODO : Leaves may have cycles. In that case, add all the functions in the leaf SCC to functions  
 				}
 			}
 		}
-		Q iPCG = IPCG.getIPCG(methods, events);
+		Q iPCG = IPCG.getIPCG(functions, events);
 		Markup m = new Markup();
 		Q iPCGEdgesToExit = Common.empty();
 		for(GraphElement ge : iPCG.eval().edges()) {
@@ -58,43 +58,43 @@ public class IPCGFactory {
 	}
 	
 	/**
-	 * Constructs the Inter-procedural PCG using two given sets of methods M1, M2, and the following events:
-	 * Callsites to methods in the union of the pairwise intersection of the reverse call graphs of (m1, m2) for each m1 and m2 in M1 and M2 respectively
-	 * The computation is restricted to the forward call graph from entryMethods.
-	 * CCA stands for Common Call Ancestor, i.e., the intersection of reverse call chains of each pair (m1, m2) of methods.  
+	 * Constructs the Inter-procedural PCG using two given sets of functions M1, M2, and the following events:
+	 * Callsites to functions in the union of the pairwise intersection of the reverse call graphs of (m1, m2) for each m1 and m2 in F1 and F2 respectively
+	 * The computation is restricted to the forward call graph from entryFunctions.
+	 * CCA stands for Common Call Ancestor, i.e., the intersection of reverse call chains of each pair (m1, m2) of functions.  
 	 * 
-	 * @param entryMethods 
-	 * @param methods1 first set of methods M1
-	 * @param methods2 second set of methos M2
+	 * @param entryFunctions 
+	 * @param functions1 first set of functions M1
+	 * @param functions2 second set of functions M2
 	 * @param events
 	 * @return
 	 */
-	public static Q getIPCGIncludingPairwiseCCAs(Q entryMethods, Q methods1, Q methods2, Q events){
+	public static Q getIPCGIncludingPairwiseCCAs(Q entryFunctions, Q functions1, Q functions2, Q events){
 		Q callEdges = Common.edges(XCSG.Call);
-		Q methods = methods1.union(methods2);
+		Q functions = functions1.union(functions2);
 		
-		// Find the union of the pairwise intersection of reverse call graphs from the methods
-		for (GraphElement method1: methods1.eval().nodes()){
-			Q reverseCallForMethod1 = Common.toQ(method1).reverseOn(callEdges);
-			for (GraphElement method2: methods2.eval().nodes()){
-				if(!method1.equals(method2)) {
-					Q reverseCallForMethod2 = Common.toQ(method2).reverseOn(callEdges);
+		// Find the union of the pairwise intersection of reverse call graphs from the functions
+		for (GraphElement function1: functions1.eval().nodes()){
+			Q reverseCallForFunction1 = Common.toQ(function1).reverseOn(callEdges);
+			for (GraphElement function2: functions2.eval().nodes()){
+				if(!function1.equals(function2)) {
+					Q reverseCallForFunction2 = Common.toQ(function2).reverseOn(callEdges);
 					
-					// Intersection of the reverse call graphs from the 2 sets of methods
-					Q intersectionOfReverseCallGraphs = reverseCallForMethod1.union(reverseCallForMethod2);
+					// Intersection of the reverse call graphs from the 2 sets of functions
+					Q intersectionOfReverseCallGraphs = reverseCallForFunction1.union(reverseCallForFunction2);
 
-					if(entryMethods != null && !CommonQueries.isEmpty(entryMethods)) {
+					if(entryFunctions != null && !CommonQueries.isEmpty(entryFunctions)) {
 						// Entry point is specified, so restrict the intersection of reverse call graphs 
 						// further to those reachable from the entry point 
-						methods = methods.union(entryMethods.forwardOn(callEdges).intersection(intersectionOfReverseCallGraphs));
+						functions = functions.union(entryFunctions.forwardOn(callEdges).intersection(intersectionOfReverseCallGraphs));
 					} else {
 						// Entry point not specified, so just take the intersection of reverse call graphs 
-						methods = methods.union(intersectionOfReverseCallGraphs);
+						functions = functions.union(intersectionOfReverseCallGraphs);
 					}
 				}
 			}
 		}
-		Q iPCG = IPCG.getIPCG(methods, events);
+		Q iPCG = IPCG.getIPCG(functions, events);
 		Markup m = new Markup();
 		Q iPCGEdgesToExit = Common.empty();
 		for(GraphElement ge : iPCG.eval().edges()) {
@@ -108,75 +108,75 @@ public class IPCGFactory {
 	}
 	
 	/**
-	 * Constructs the Inter-procedural PCG using two given sets of methods M1, M2, and the following events:
-	 * Callsites to methods in the union of the reverse call graphs of (m1, m2) for each m1 and m2 in M1 and M2 respectively
-	 * The computation is restricted to the forward call graph from entryMethods.
+	 * Constructs the Inter-procedural PCG using two given sets of functions M1, M2, and the following events:
+	 * Callsites to functions in the union of the reverse call graphs of (m1, m2) for each m1 and m2 in F1 and F2 respectively
+	 * The computation is restricted to the forward call graph from entryFunctions.
 	 * "Interactions" as opposed to "Common Call Ancestors" means that the union of reverse call graphs is taken, rather than their intersection.  
 	 * 
-	 * @param entryMethods
-	 * @param methods1
-	 * @param methods2
+	 * @param entryFunctions
+	 * @param functions1
+	 * @param functions2
 	 * @param events
 	 * @return
 	 */
-	public static Q getIPCGFromInteractions(Q entryMethods, Q methods1, Q methods2, Q events){
+	public static Q getIPCGFromInteractions(Q entryFunctions, Q functions1, Q functions2, Q events){
 		Q callEdges = Common.edges(XCSG.Call);
-		Q rev1 = methods1.reverseOn(callEdges);
-		Q rev2 = methods2.reverseOn(callEdges);
+		Q rev1 = functions1.reverseOn(callEdges);
+		Q rev2 = functions2.reverseOn(callEdges);
 		
 		Q revCalls = rev1.union(rev2);
-		Q methods = Common.empty();
-		if(entryMethods != null && !CommonQueries.isEmpty(entryMethods)) {
+		Q functions = Common.empty();
+		if(entryFunctions != null && !CommonQueries.isEmpty(entryFunctions)) {
 			// Entry point is specified, so restrict the intersection of reverse call graphs 
 			// further to those reachable from the entry point 
 			if(CommonQueries.isEmpty(revCalls)) {
-				methods = entryMethods.forwardOn(callEdges);
+				functions = entryFunctions.forwardOn(callEdges);
 			} else {
-				methods = revCalls.intersection(entryMethods.forwardOn(callEdges));
+				functions = revCalls.intersection(entryFunctions.forwardOn(callEdges));
 			}
 		}
-		Q iPCG = IPCG.getIPCG(methods.nodesTaggedWithAny(XCSG.Function), events);
+		Q iPCG = IPCG.getIPCG(functions.nodesTaggedWithAny(XCSG.Function), events);
 		
 		return iPCG;
 	}
 	
-	public static Q getIPCGFromEvents(Q explicitMethods, Q events){
+	public static Q getIPCGFromEvents(Q explicitFunctions, Q events){
 		
-		Q containingMethods = StandardQueries.getContainingFunctions(events);
-		Q methods = explicitMethods.union(containingMethods);
+		Q containingFunctions = StandardQueries.getContainingFunctions(events);
+		Q functions = explicitFunctions.union(containingFunctions);
 		
-		Q iPCG = IPCG.getIPCG(methods.nodesTaggedWithAny(XCSG.Function), events);
+		Q iPCG = IPCG.getIPCG(functions.nodesTaggedWithAny(XCSG.Function), events);
 		
 		return iPCG;
 	}
 	
 	/**
-	 * Constructs the Inter-procedural CFG using CFGs of two given sets of methods M1, M2, and the methods containing the following events:
-	 * Callsites to methods in the union of the reverse call graphs of (m1, m2) for each m1 and m2 in M1 and M2 respectively
-	 * The computation is restricted to the forward call graph from entryMethods.
+	 * Constructs the Inter-procedural CFG using CFGs of two given sets of functions M1, M2, and the functions containing the following events:
+	 * Callsites to functions in the union of the reverse call graphs of (m1, m2) for each m1 and m2 in F1 and F2 respectively
+	 * The computation is restricted to the forward call graph from entryFunctions.
 	 * "Interactions" as opposed to "Common Call Ancestors" means that the union of reverse call graphs is taken, rather than their intersection.  
 	 * 
-	 * @param entryMethods
-	 * @param methods1
-	 * @param methods2
+	 * @param entryFunctions
+	 * @param functions1
+	 * @param functions2
 	 * @param events
 	 * @return
 	 */
-	public static Q getICFGFromInteractions(Q entryMethods, Q methods1, Q methods2, Q events){
+	public static Q getICFGFromInteractions(Q entryFunctions, Q functions1, Q functions2, Q events){
 		Q callEdges = Common.edges(XCSG.Call);
-		Q rev1 = methods1.reverseOn(callEdges);
-		Q rev2 = methods2.reverseOn(callEdges);
+		Q rev1 = functions1.reverseOn(callEdges);
+		Q rev2 = functions2.reverseOn(callEdges);
 		
 		Q revCalls = rev1.union(rev2);
 		
-		Q methods = Common.empty();
-		if(entryMethods != null && !CommonQueries.isEmpty(entryMethods)) {
+		Q functions = Common.empty();
+		if(entryFunctions != null && !CommonQueries.isEmpty(entryFunctions)) {
 			// Entry point is specified, so restrict the reverse calls only 
 			// to those reachable from the entry point	 
-			methods = revCalls.intersection(entryMethods.forwardOn(callEdges));
+			functions = revCalls.intersection(entryFunctions.forwardOn(callEdges));
 		}
 		
-		Q icfg = IPCG.getICFG(methods.nodesTaggedWithAny(XCSG.Method));
+		Q icfg = IPCG.getICFG(functions.nodesTaggedWithAny(XCSG.Function));
 		
 		Markup m = new Markup();
 		Q iPCGEdgesToExit = Common.empty();

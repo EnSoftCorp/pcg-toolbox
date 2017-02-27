@@ -9,7 +9,7 @@ public class PCGFactory {
 	/**
 	 * Construct the PCG for the given CFG and the events of interest
 	 * @param cfg
-	 * @param method
+	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
@@ -20,7 +20,7 @@ public class PCGFactory {
 	/**
 	 * Construct the PCG for the given CFG and the events of interest
 	 * @param cfg
-	 * @param method
+	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
@@ -29,14 +29,14 @@ public class PCGFactory {
 	}
 	
 	/**
-	 * Construct the PCG for the given a method and the events of interest
-	 * @param method
+	 * Construct the PCG for the given a function and the events of interest
+	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
-	public static Q PCGforMethod(Q method, Q events){
-//		Q cfg = CFG.excfg(method);
-		Q cfg = CFG.cfg(method);
+	public static Q PCGforFunction(Q function, Q events){
+//		Q cfg = CFG.excfg(function);
+		Q cfg = CFG.cfg(function);
 		return PCG(cfg, events);
 	}
 }

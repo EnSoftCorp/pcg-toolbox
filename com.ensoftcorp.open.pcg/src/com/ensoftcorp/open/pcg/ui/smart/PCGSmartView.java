@@ -16,7 +16,7 @@ import com.ensoftcorp.open.pcg.factory.PCGFactory;
  * Input:
  * One or more ControlFlow_Nodes or DataFlow_Nodes.
  * 
- * DataFlow_Nodes imply selection of their enclosing ControlFlow_Nodes and Methods. 
+ * DataFlow_Nodes imply selection of their enclosing ControlFlow_Nodes and Functions. 
  * ControlFlow_Nodes are interpreted as selected events.
  * 
  * Output:
@@ -42,9 +42,9 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 	public StyledResult selectionChanged(IAtlasSelectionEvent selected) {
 		ControlFlowSelection cfSelection = ControlFlowSelection.processSelection(selected);
 
-		Q methods = cfSelection.getImpliedMethods();
+		Q functions = cfSelection.getImpliedFunctions();
 		
-		if (methods.eval().nodes().isEmpty()){
+		if (functions.eval().nodes().isEmpty()){
 			return null;
 		}
 		
@@ -52,9 +52,9 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 		
 		Q cfg;
 		if(inlcudeExceptionalControlFlow()){
-			cfg = CFG.excfg(methods); // exceptional
+			cfg = CFG.excfg(functions); // exceptional
 		} else {
-			cfg = CFG.cfg(methods); // non-exceptional
+			cfg = CFG.cfg(functions); // non-exceptional
 		}
 		
 		Q pcg = PCGFactory.PCG(cfg, events);
@@ -70,8 +70,8 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 	
 	protected static class ControlFlowSelection {
 		
-		public Q getSelectedMethods() {
-			return selectedMethods;
+		public Q getSelectedFunctions() {
+			return selectedFunctions;
 		}
 
 		public Q getSelectedDataFlow() {
@@ -94,44 +94,44 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 		}
 
 		/**
-		 * Directly selected methods and the 
-		 * methods which enclose any selected
+		 * Directly selected functions and the 
+		 * functions which enclose any selected
 		 * data or control flow nodes.
 		 * 
 		 * @return
 		 */
-		public Q getImpliedMethods() {
-			return impliedMethods;
+		public Q getImpliedFunctions() {
+			return impliedFunctions;
 		}
 
-		private Q selectedMethods;
+		private Q selectedFunctions;
 		private Q selectedDataFlow;
 		private Q selectedControlFlow;
 		private Q impliedControlFlow;
-		private Q impliedMethods;
+		private Q impliedFunctions;
 
-		private ControlFlowSelection(Q selectedMethods, Q selectedDataFlow,
+		private ControlFlowSelection(Q selectedFunctions, Q selectedDataFlow,
 				Q selectedControlFlow, Q enclosingControlFlow,
-				Q enclosingMethods) {
-					this.selectedMethods = selectedMethods;
+				Q enclosingFunctions) {
+					this.selectedFunctions = selectedFunctions;
 					this.selectedDataFlow = selectedDataFlow;
 					this.selectedControlFlow = selectedControlFlow;
 					this.impliedControlFlow = enclosingControlFlow;
-					this.impliedMethods = enclosingMethods;
+					this.impliedFunctions = enclosingFunctions;
 		}
 
 		public static ControlFlowSelection processSelection(IAtlasSelectionEvent atlasSelection) {
 			Q selected = atlasSelection.getSelection();
 
-			Q selectedMethods = selected.nodesTaggedWithAny(XCSG.Method);
+			Q selectedFunctions = selected.nodesTaggedWithAny(XCSG.Function);
 			Q selectedDataFlow = selected.nodesTaggedWithAny(XCSG.DataFlow_Node);
 			Q selectedControlFlow = selected.nodesTaggedWithAny(XCSG.ControlFlow_Node);		
 			
 			Q impliedControlFlow = selectedControlFlow.union(selectedDataFlow.parent());
 			
-			Q impliedMethods = selectedMethods.union(StandardQueries.getContainingFunctions(selectedControlFlow.union(selectedDataFlow)));
+			Q impliedFunctions = selectedFunctions.union(StandardQueries.getContainingFunctions(selectedControlFlow.union(selectedDataFlow)));
 			
-			return new ControlFlowSelection(selectedMethods, selectedDataFlow, selectedControlFlow, impliedControlFlow, impliedMethods);
+			return new ControlFlowSelection(selectedFunctions, selectedDataFlow, selectedControlFlow, impliedControlFlow, impliedFunctions);
 		}
 	}
 }

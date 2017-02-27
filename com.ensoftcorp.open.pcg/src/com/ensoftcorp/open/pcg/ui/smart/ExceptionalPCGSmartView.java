@@ -4,7 +4,7 @@ package com.ensoftcorp.open.pcg.ui.smart;
  * Input:
  * One or more ControlFlow_Nodes or DataFlow_Nodes.
  * 
- * DataFlow_Nodes imply selection of their enclosing ControlFlow_Nodes and Methods. 
+ * DataFlow_Nodes imply selection of their enclosing ControlFlow_Nodes and Functions. 
  * ControlFlow_Nodes are interpreted as selected events.
  * 
  * Output:
