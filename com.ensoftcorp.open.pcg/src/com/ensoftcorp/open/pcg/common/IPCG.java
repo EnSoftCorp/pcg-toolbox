@@ -1,5 +1,7 @@
 package com.ensoftcorp.open.pcg.common;
 
+import static com.ensoftcorp.atlas.core.script.Common.universe;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -9,6 +11,7 @@ import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.graph.UncheckedGraph;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
+import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Attr;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
@@ -16,6 +19,7 @@ import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 import com.ensoftcorp.open.pcg.factory.PCGFactory;
@@ -154,23 +158,36 @@ public class IPCG {
 	 *          and the controlFlowRoot is the root for each target function found in "functions" which can be reached
 	 *          from the callSite
 	 */
-	private static List<IPCGEdge> findFunctionsForCallSites(Q callSiteCFNode, Q functions) {
+	private static List<IPCGEdge> findFunctionsForCallSites(Q callsiteCFNode, Q functions) {
 		List<IPCGEdge> PCGEdgeList = new LinkedList<IPCGEdge>();
+
+		AtlasSet<Node> forwardCallFromTarget = new AtlasHashSet<Node>();
 		
+		// TODO: resolve dynamic dispatches in java, for now just cheating with a forward from CF node on per control call edges
+		// this could be satisfied with CallSiteAnalysis.getTargetMethods in JavaCommonsToolbox
+		// ...but can we do this agnostic of the language...without PER_CONTROL_FLOW CALL edges...
+		Q perControlCallEdges = Common.universe().edgesTaggedWithAny(Attr.Edge.CALL, XCSG.Call);
+		forwardCallFromTarget.addAll(perControlCallEdges.forward(callsiteCFNode).eval().nodes());
 		
-		Q forwardCall = Common.universe().edgesTaggedWithAny(Attr.Edge.CALL, XCSG.Call).forward(callSiteCFNode);
+		// this is the start of the proper way to do it and works for C (except for function pointer calls...)
+		// however for Java it could pull in this like Java interface methods
+		// ...so only do it if the forwardCallFromTarget just contains the original function
+		// so this really only come into play for C codes since Java will have the Attr.Edge.CALL edges
+		if(forwardCallFromTarget.size() == 1){
+			Q callsiteDFNode = callsiteCFNode.contained().nodesTaggedWithAny(XCSG.CallSite);
+			Q callsiteTarget = Common.universe().edgesTaggedWithAny(XCSG.InvokedFunction, XCSG.InvokedSignature).forwardStep(callsiteDFNode);
+			forwardCallFromTarget.addAll(Common.universe().edgesTaggedWithAny(XCSG.Call).forward(callsiteTarget).eval().nodes());
+		}
 		
 		for (Node function : functions.eval().nodes()){
-			Q m = Common.toQ(function);
-			if (!m.intersection(forwardCall).eval().nodes().isEmpty()){
-				Node cfRoot = m.contained().nodesTaggedWithAny(XCSG.controlFlowRoot).eval().nodes().getFirst();
-				
+			if (forwardCallFromTarget.contains(function)){
+				Node cfRoot = Common.toQ(function).contained().nodesTaggedWithAny(XCSG.controlFlowRoot).eval().nodes().one();
 				if(cfRoot != null) {
-					PCGEdgeList.add(new IPCGEdge(callSiteCFNode.eval().nodes().getFirst(), cfRoot));
+					PCGEdgeList.add(new IPCGEdge(callsiteCFNode.eval().nodes().one(), cfRoot));
 				} else {
-					// For functions outside the indexed app, e.g., JDK functions, we don't have the control flow root node, 
+					// For functions outside the indexed app, e.g., standard library functions, we don't have the control flow root node, 
 					// so just add the function node itself.   
-					PCGEdgeList.add(new IPCGEdge(callSiteCFNode.eval().nodes().getFirst(), function));
+					PCGEdgeList.add(new IPCGEdge(callsiteCFNode.eval().nodes().one(), function));
 				}
 			}
 		}
@@ -194,7 +211,7 @@ public class IPCG {
 		Q masterEntryNodes = PCG.nodesTaggedWithAny(PCGNode.EventFlow_Master_Entry);
 		Q masterExitNodes = PCG.nodesTaggedWithAny(PCGNode.EventFlow_Master_Exit);
 	
-		//Get successors (filter out directly connencted exit nodes)
+		//Get successors (filter out directly connected exit nodes)
 		Q successorsWithOrigin = PCGEdges.forwardStep(masterEntryNodes).difference(masterExitNodes);
 		
 		//Delete old masterEntryNodes and edges
@@ -304,7 +321,7 @@ public class IPCG {
 					newEdge.tag(PCGEdge.EventFlow_Edge);
 					return newEdge;
 				} else {
-					return PCGEdges.eval().edges().getFirst();
+					return PCGEdges.eval().edges().one();
 				}
 			} else {
 				return null;
