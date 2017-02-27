@@ -1,0 +1,7 @@
+com.ensoftcorp.open.pcg
+com.ensoftcorp.open.pcg.common
+com.ensoftcorp.open.pcg.factory
+com.ensoftcorp.open.pcg.log
+com.ensoftcorp.open.pcg.ui
+com.ensoftcorp.open.pcg.ui.smart
+org.eclipse.wb.swt
