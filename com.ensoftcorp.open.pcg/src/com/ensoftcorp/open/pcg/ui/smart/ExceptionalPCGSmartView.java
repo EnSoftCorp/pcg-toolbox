@@ -20,7 +20,7 @@ public class ExceptionalPCGSmartView extends PCGSmartView {
 
 	@Override
 	public String getTitle() {
-		return "Exception Projected Control Graph (PCG)";
+		return "Exceptional Projected Control Graph (ExPCG)";
 	}
 	
 	@Override
