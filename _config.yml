@@ -6,7 +6,7 @@
 name: PCG Toolbox
 
 # Short bio or description (displayed in the header)
-description: A toolbox for computing Project Control Graphs (PCGs)
+description: A toolbox for computing Projected Control Graphs (PCGs)
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://ensoftcorp.github.io/pcg-toolbox/images/toolbox.png
