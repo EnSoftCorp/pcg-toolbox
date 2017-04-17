@@ -2,16 +2,17 @@ package com.ensoftcorp.open.pcg.common;
 
 import java.awt.Color;
 
+import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
+import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
+import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
-import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
 public class HighlighterUtils {
@@ -44,6 +45,42 @@ public class HighlighterUtils {
 		m.setEdge(cvTrue, MarkupProperty.EDGE_COLOR, cfgTrue);
 		m.setEdge(cvFalse, MarkupProperty.EDGE_COLOR, cfgFalse);
 		m.setEdge(Query.universe().edgesTaggedWithAny(XCSG.ExceptionalControlFlow_Edge), MarkupProperty.EDGE_COLOR, cfgExceptional);
+	}
+	
+	public static Markup getIPCG2Markup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Q eventFunctions = IPCG2.getFunctionsContainingEvents(events);
+		Q ipcgCallGraph = IPCG2.getIPCGCallGraph(eventFunctions, selectedAncestors);
+		Q ipcgFunctions = ipcgCallGraph.retainNodes();
+		Q expandableFunctions = ipcgCallGraph.retainNodes().difference(eventFunctions);
+		Q ancestorFunctions = IPCG2.getAncestorFunctions(events);
+		
+		Markup m = new Markup();
+		
+		// color the selected events
+		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
+		
+		// make expandable functions dotted
+		m.setNode(expandableFunctions, MarkupProperty.NODE_BORDER_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+		
+		// highlight border of ancestor functions
+		m.setNode(ancestorFunctions, MarkupProperty.NODE_BORDER_COLOR, Color.RED);
+		
+		// set ipcg callsite control flow gray
+		AtlasSet<Edge> iPCGEdgesEntryOrExit = new AtlasHashSet<Edge>();
+		for(Edge edge : ipcg.eval().edges()) {
+			GraphElement from = edge.getNode(EdgeDirection.FROM);
+			GraphElement to = edge.getNode(EdgeDirection.TO);
+			if(from.taggedWith(PCGNode.EventFlow_Master_Entry) || to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
+				iPCGEdgesEntryOrExit.add(edge);
+			}
+		}
+		m.setEdge(Common.toQ(iPCGEdgesEntryOrExit), MarkupProperty.EDGE_COLOR, Color.GRAY);
+
+		// highlight control flow edges
+		applyHighlightsForCFEdges(m);
+		
+		return m;
 	}
 	
 	public static Markup getIPCGMarkup(Q ipcg, Q entryFunctions, Q events) {

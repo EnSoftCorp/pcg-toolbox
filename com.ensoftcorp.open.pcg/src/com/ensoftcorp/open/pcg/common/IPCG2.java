@@ -99,17 +99,17 @@ public class IPCG2 {
 		return ipcg.union(ipcgCallGraph);
 	}
 	
-	private static Q getIPCGCallGraph(Q eventFunctions, Q selectedAncestors){
+	public static Q getFunctionsContainingEvents(Q events){
+		events = events.nodes(XCSG.ControlFlow_Node);
+		return StandardQueries.getContainingFunctions(events);
+	}
+	
+	public static Q getIPCGCallGraph(Q eventFunctions, Q selectedAncestors){
 		Q callEdges = Common.universe().edges(XCSG.Call);
 		selectedAncestors = callEdges.reverse(eventFunctions).intersection(selectedAncestors);
 		Q ipcgFunctions = eventFunctions.union(selectedAncestors);
 		Q ipcgCallGraph = ipcgFunctions.union(callEdges.between(ipcgFunctions, ipcgFunctions));
 		return ipcgCallGraph;
-	}
-	
-	private static Q getFunctionsContainingEvents(Q events){
-		events = events.nodes(XCSG.ControlFlow_Node);
-		return StandardQueries.getContainingFunctions(events);
 	}
 	
 	private static Edge getOrCreateIPCGEdge(Node from, Node to){

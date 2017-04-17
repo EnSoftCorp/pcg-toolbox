@@ -1,5 +1,6 @@
 package com.ensoftcorp.open.pcg.ui;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,11 +34,13 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.wb.swt.ResourceManager;
 import org.eclipse.wb.swt.SWTResourceManager;
 
-import com.ensoftcorp.atlas.core.db.graph.GraphElement;
+import com.ensoftcorp.atlas.core.db.graph.Edge;
+import com.ensoftcorp.atlas.core.db.graph.Graph;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.markup.Markup;
+import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
@@ -48,7 +51,6 @@ import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.IPCG2;
-import com.ensoftcorp.open.pcg.factory.IPCGFactory;
 
 public class PCGBuilderView extends ViewPart {
 
@@ -310,7 +312,8 @@ public class PCGBuilderView extends ViewPart {
 					Q includedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 					Q expandedFunctions = Common.toQ(pcg.getExpandedFunctions());
 					Q pcgResult = IPCG2.getIPCG(events, includedAncestors, expandedFunctions);
-					DisplayUtils.show(pcgResult, true, pcg.getName());
+					Markup pcgResultMarkup = HighlighterUtils.getIPCG2Markup(pcgResult, events, includedAncestors, expandedFunctions);
+					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
 		});
@@ -322,10 +325,22 @@ public class PCGBuilderView extends ViewPart {
 				if(noAncestors){
 					DisplayUtils.showError("There are no ancestors to show.");
 				} else {
-					Q callEdges = Common.universe().edges(XCSG.Call);
 					Q containingFunctions = Common.toQ(pcg.getContainingFunctions());
-					Q ancestorCallGraph = callEdges.reverse(containingFunctions);
-					DisplayUtils.show(ancestorCallGraph, true, pcg.getName() + " Ancestor Call Graph");
+					
+					Graph ancestorIPCGCallGraph = IPCG2.getIPCGCallGraph(containingFunctions, Common.toQ(pcg.getAncestorFunctions())).eval();
+					AtlasSet<Edge> ancestorIPCGCallGraphEdges = new AtlasHashSet<Edge>();
+					ancestorIPCGCallGraphEdges.addAll(ancestorIPCGCallGraph.edges());
+					AtlasSet<Edge> ipcgCallGraphEdges = IPCG2.getIPCGCallGraph(containingFunctions, Common.empty()).eval().edges();
+					for(Edge ipcgCallGraphEdge : ipcgCallGraphEdges){
+						ancestorIPCGCallGraphEdges.remove(ipcgCallGraphEdge);
+					}
+					
+					// color the ancestor call edges (that could be optionally included as dashed gray edges)
+					Markup markup = new Markup();
+					markup.setEdge(Common.toQ(ancestorIPCGCallGraphEdges), MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+					markup.setEdge(Common.toQ(ancestorIPCGCallGraphEdges), MarkupProperty.EDGE_COLOR, Color.GRAY);
+					
+					DisplayUtils.show(Common.toQ(ancestorIPCGCallGraph), markup, true, pcg.getName() + " Ancestor Call Graph");
 				}
 			}
 		});
@@ -357,6 +372,7 @@ public class PCGBuilderView extends ViewPart {
 		            } else {
 		            	pcg.removeIncludedAncestorFunction(ancestorFunction);
 		            }
+		            refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
 		        }
 		    });
 
