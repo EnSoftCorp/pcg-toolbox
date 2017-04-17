@@ -47,6 +47,7 @@ import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
+import com.ensoftcorp.open.pcg.common.IPCG2;
 import com.ensoftcorp.open.pcg.factory.IPCGFactory;
 
 public class PCGBuilderView extends ViewPart {
@@ -125,6 +126,12 @@ public class PCGBuilderView extends ViewPart {
 				addPCG(pcgFolder, pcg);
 			}
 		};
+		
+		// uncomment to preview with window builder
+//		PCGComponents pcg = new PCGComponents("TEST");
+//		pcgs.put("TEST", pcg);
+//		addPCG(pcgFolder, pcg);
+		
 		addPCGAction.setText("New PCG");
 		addPCGAction.setToolTipText("Creates another PCG builder tab");
 		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/new_configuration_button.png"));
@@ -181,82 +188,91 @@ public class PCGBuilderView extends ViewPart {
 			}
 		});
 		
-		Button showButton = new Button(pcgControlPanelComposite, SWT.NONE);
+		final Button showButton = new Button(pcgControlPanelComposite, SWT.NONE);
 		showButton.setText("Show PCG");
 		
-		Composite pcgBuilderComposite = new Composite(pcgComposite, SWT.NONE);
+		final Composite pcgBuilderComposite = new Composite(pcgComposite, SWT.NONE);
 		pcgBuilderComposite.setLayout(new GridLayout(1, false));
 		pcgBuilderComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		
-		SashForm groupSashForm = new SashForm(pcgBuilderComposite, SWT.NONE);
+		final SashForm groupSashForm = new SashForm(pcgBuilderComposite, SWT.NONE);
 		groupSashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		
-		final Group entryFunctionsGroup = new Group(groupSashForm, SWT.NONE);
-		entryFunctionsGroup.setText("Entry Functions (0 functions)");
-		entryFunctionsGroup.setLayout(new GridLayout(1, false));
+		final SashForm eventFunctionsGroupSashForm = new SashForm(groupSashForm, SWT.NONE);
+		eventFunctionsGroupSashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		
-		Composite addCallGraphElementComposite = new Composite(entryFunctionsGroup, SWT.NONE);
-		addCallGraphElementComposite.setLayout(new GridLayout(2, false));
-		addCallGraphElementComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
-		Label addCallGraphElementLabel = new Label(addCallGraphElementComposite, SWT.NONE);
-		addCallGraphElementLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
-		addCallGraphElementLabel.setBounds(0, 0, 59, 14);
-		addCallGraphElementLabel.setText("Add Selected");
-		
-		final Label addCallGraphElementButton = new Label(addCallGraphElementComposite, SWT.NONE);
-		addCallGraphElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		addCallGraphElementButton.setSize(20, 20);
-		addCallGraphElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
-		
-		final ScrolledComposite entryFunctionsScrolledComposite = new ScrolledComposite(entryFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
-		entryFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
-		entryFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-		entryFunctionsScrolledComposite.setExpandHorizontal(true);
-		entryFunctionsScrolledComposite.setExpandVertical(true);
-		
-		Group eventsGroup = new Group(groupSashForm, SWT.NONE);
+		final Group eventsGroup = new Group(eventFunctionsGroupSashForm, SWT.NONE);
 		eventsGroup.setText("Control Flow Events");
 		eventsGroup.setLayout(new GridLayout(1, false));
 		
-		Composite addControlFlowEventsElementComposite = new Composite(eventsGroup, SWT.NONE);
-		addControlFlowEventsElementComposite.setLayout(new GridLayout(2, false));
-		addControlFlowEventsElementComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+		final Composite addControlFlowEventsComposite = new Composite(eventsGroup, SWT.NONE);
+		addControlFlowEventsComposite.setLayout(new GridLayout(2, false));
+		addControlFlowEventsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
 		
-		Label addControlFlowEventsElementLabel = new Label(addControlFlowEventsElementComposite, SWT.NONE);
-		addControlFlowEventsElementLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
-		addControlFlowEventsElementLabel.setText("Add Selected");
+		final Label addControlFlowEventsLabel = new Label(addControlFlowEventsComposite, SWT.NONE);
+		addControlFlowEventsLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
+		addControlFlowEventsLabel.setText("Add Selected");
 		
-		Label addControlFlowEventsElementButton = new Label(addControlFlowEventsElementComposite, SWT.NONE);
-		addControlFlowEventsElementButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
-		addControlFlowEventsElementButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
+		final Label addControlFlowEventsButton = new Label(addControlFlowEventsComposite, SWT.NONE);
+		addControlFlowEventsButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
+		addControlFlowEventsButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
 		final ScrolledComposite controlFlowEventsScrolledComposite = new ScrolledComposite(eventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		controlFlowEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		controlFlowEventsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		controlFlowEventsScrolledComposite.setExpandHorizontal(true);
 		controlFlowEventsScrolledComposite.setExpandVertical(true);
-		groupSashForm.setWeights(new int[] {250, 441});
 		
-		addCallGraphElementButton.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseUp(MouseEvent e) {
-				if(selection.isEmpty()){
-					DisplayUtils.showError("Nothing is selected.");
-				} else {
-					AtlasSet<Node> functions = getFilteredSelections(XCSG.Function);
-					if(functions.isEmpty()){
-						DisplayUtils.showError("Selections must be functions or function callsites.");
-					} else {
-						if(pcg.addCallGraphFunctions(functions)){
-							refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-						}
-					}
-				}
-			}
-		});
+		final Group containingFunctionsGroup = new Group(eventFunctionsGroupSashForm, SWT.NONE);
+		containingFunctionsGroup.setText("Containing Functions");
+		containingFunctionsGroup.setLayout(new GridLayout(1, false));
 		
-		addControlFlowEventsElementButton.addMouseListener(new MouseAdapter() {
+		final ScrolledComposite containingFunctionsScrolledComposite = new ScrolledComposite(containingFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		containingFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+		containingFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+		containingFunctionsScrolledComposite.setExpandHorizontal(true);
+		containingFunctionsScrolledComposite.setExpandVertical(true);
+		
+		final SashForm ancestorExpandableGroupSashForm = new SashForm(groupSashForm, SWT.NONE);
+		ancestorExpandableGroupSashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+		
+		final Group ancestorFunctionsGroup = new Group(ancestorExpandableGroupSashForm, SWT.NONE);
+		ancestorFunctionsGroup.setText("Ancestor Functions");
+		ancestorFunctionsGroup.setLayout(new GridLayout(1, false));
+		
+		final Composite ancestorFunctionsComposite = new Composite(ancestorFunctionsGroup, SWT.NONE);
+		ancestorFunctionsComposite.setLayout(new GridLayout(1, false));
+		ancestorFunctionsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+		
+//		final Label showAncestorFunctionsLabel = new Label(ancestorFunctionsComposite, SWT.NONE);
+//		showAncestorFunctionsLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
+//		showAncestorFunctionsLabel.setText("Show Ancestors");
+//		
+//		final Label showAncestorFunctionsButton = new Label(ancestorFunctionsComposite, SWT.NONE);
+//		showAncestorFunctionsButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
+//		showAncestorFunctionsButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
+		
+		final Button showAncestorFunctionsButton = new Button(ancestorFunctionsComposite, SWT.NONE);
+		showAncestorFunctionsButton.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+		showAncestorFunctionsButton.setText("Show Ancestor Call Graph");
+		
+		final ScrolledComposite ancestorFunctionsScrolledComposite = new ScrolledComposite(ancestorFunctionsComposite, SWT.H_SCROLL | SWT.V_SCROLL);
+		ancestorFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+		ancestorFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+		ancestorFunctionsScrolledComposite.setExpandHorizontal(true);
+		ancestorFunctionsScrolledComposite.setExpandVertical(true);
+
+		final Group expandableFunctionsGroup = new Group(ancestorExpandableGroupSashForm, SWT.NONE);
+		expandableFunctionsGroup.setText("Expandable Functions");
+		expandableFunctionsGroup.setLayout(new GridLayout(1, false));
+
+		final ScrolledComposite expandableFunctionsScrolledComposite = new ScrolledComposite(expandableFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		expandableFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+		expandableFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+		expandableFunctionsScrolledComposite.setExpandHorizontal(true);
+		expandableFunctionsScrolledComposite.setExpandVertical(true);
+
+		addControlFlowEventsButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
 				if(selection.isEmpty()){
@@ -273,14 +289,10 @@ public class PCGBuilderView extends ViewPart {
 						DisplayUtils.showError("Selections must correspond to control flow statements.");
 					} else {
 						if(pcg.addControlFlowEvents(controlFlowNodes)){
-							refreshControlFlowEventElements(controlFlowEventsScrolledComposite,pcg);
-						}
-						AtlasSet<Node> containingFunctions = new AtlasHashSet<Node>();
-						for(Node controlFlowNode : controlFlowNodes){
-							containingFunctions.add(StandardQueries.getContainingFunction(controlFlowNode));
-						}
-						if(pcg.addCallGraphFunctions(containingFunctions)){
-							refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
+							refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+							refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+							refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+							refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
 						}
 					}
 				}
@@ -293,14 +305,27 @@ public class PCGBuilderView extends ViewPart {
 				boolean noControlFlowEvents = pcg.getControlFlowEvents().isEmpty();
 				if(noControlFlowEvents){
 					DisplayUtils.showError("No control flow events are defined.");
-				} else if(pcg.getCallGraphFunctions().isEmpty()){
-					DisplayUtils.showError("Call graph context cannot be empty.");
 				} else {
-					Q entryFunctions = Common.toQ(pcg.getCallGraphFunctions());
 					Q events = Common.toQ(pcg.getControlFlowEvents());
-					Q pcgResult = IPCGFactory.getIPCGFromEvents(entryFunctions, events);
-					Markup pcgResultMarkup = HighlighterUtils.getIPCGMarkup(pcgResult, entryFunctions, events);
-					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
+					Q includedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
+					Q expandedFunctions = Common.toQ(pcg.getExpandedFunctions());
+					Q pcgResult = IPCG2.getIPCG(events, includedAncestors, expandedFunctions);
+					DisplayUtils.show(pcgResult, true, pcg.getName());
+				}
+			}
+		});
+		
+		showAncestorFunctionsButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				boolean noAncestors = pcg.getAncestorFunctions().isEmpty();
+				if(noAncestors){
+					DisplayUtils.showError("There are no ancestors to show.");
+				} else {
+					Q callEdges = Common.universe().edges(XCSG.Call);
+					Q containingFunctions = Common.toQ(pcg.getContainingFunctions());
+					Q ancestorCallGraph = callEdges.reverse(containingFunctions);
+					DisplayUtils.show(ancestorCallGraph, true, pcg.getName() + " Ancestor Call Graph");
 				}
 			}
 		});
@@ -309,88 +334,44 @@ public class PCGBuilderView extends ViewPart {
 		pcgFolder.setSelection(pcgFolder.getItemCount()-1);
 	}
 	
-	/**
-	 * Given a callsite this function returns the invoked function signature
-	 * @param callsite
-	 * @return
-	 */
-	public static Node getInvokedFunctionSignature(GraphElement callsite) {
-		// XCSG.InvokedSignature connects a dynamic dispatch to its signature function
-		// XCSG.InvokedFunction connects a static dispatch to it actual target function
-		Q invokedEdges = Common.universe().edgesTaggedWithAny(XCSG.InvokedSignature, XCSG.InvokedFunction);
-		Node function = invokedEdges.successors(Common.toQ(callsite)).eval().nodes().getFirst();
-		return function;
-	}
-	
-	private void refreshCallGraphElements(final Group entryFunctionsGroup, final ScrolledComposite entryFunctionsScrolledComposite, final ScrolledComposite controlFlowEventsScrolledComposite, final PCGComponents pcg) {
-		Composite entryFunctionsScrolledCompositeContent = new Composite(entryFunctionsScrolledComposite, SWT.NONE);
+	private void refreshAncestorFunctions(final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+		Composite ancestorFunctionsScrolledCompositeContent = new Composite(ancestorFunctionsScrolledComposite, SWT.NONE);
 		
-		long numNodes = pcg.getCallGraphFunctions().size();
-//		Q callEdges = Common.universe().edgesTaggedWithAny(XCSG.Call);
-//		long numEdges = Common.toQ(pcg.getCallGraphFunctions()).induce(callEdges).eval().edges().size();
-		entryFunctionsGroup.setText("Entry Functions (" 
-				+ numNodes + " function" + (numNodes > 1 ? "s" : "") 
-				/*+ ", " + numEdges + " induced edge" + (numEdges > 1 ? "s" : "")*/
-				+ ")");
-		
-		for(final Node function : pcg.getCallGraphFunctions()){
-			entryFunctionsScrolledCompositeContent.setLayout(new GridLayout(1, false));
+		for(final Node ancestorFunction : pcg.getAncestorFunctions()){
+			ancestorFunctionsScrolledCompositeContent.setLayout(new GridLayout(1, false));
 			
-			Label entryFunctionsSeperatorLabel = new Label(entryFunctionsScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
-			entryFunctionsSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			Label controlFlowEventsSeperatorLabel = new Label(ancestorFunctionsScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
+			controlFlowEventsSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			
-			Composite entryFunctionsEntryComposite = new Composite(entryFunctionsScrolledCompositeContent, SWT.NONE);
-			entryFunctionsEntryComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-			entryFunctionsEntryComposite.setLayout(new GridLayout(2, false));
+			Composite ancestorFunctionsComposite = new Composite(ancestorFunctionsScrolledCompositeContent, SWT.NONE);
+			ancestorFunctionsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+			ancestorFunctionsComposite.setLayout(new GridLayout(2, false));
 			
-			final Label deleteButton = new Label(entryFunctionsEntryComposite, SWT.NONE);
-			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
-			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
+			final Button includeAncestorCheckbox = new Button(ancestorFunctionsComposite, SWT.CHECK);
+			includeAncestorCheckbox.addSelectionListener(new SelectionAdapter() {
+		        @Override
+		        public void widgetSelected(SelectionEvent event) {
+		            Button checkbox = (Button) event.getSource();
+		            if(checkbox.getSelection()){
+		            	pcg.addIncludedAncestorFunction(ancestorFunction);
+		            } else {
+		            	pcg.removeIncludedAncestorFunction(ancestorFunction);
+		            }
+		        }
+		    });
 
-			Label functionLabel = new Label(entryFunctionsEntryComposite, SWT.NONE);
-			functionLabel.setToolTipText(function.toString());
-			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			functionLabel.setBounds(0, 0, 59, 14);
-			functionLabel.setText(StandardQueries.getQualifiedFunctionName(function));
+			Label eventLabel = new Label(ancestorFunctionsComposite, SWT.NONE);
+			eventLabel.setToolTipText(ancestorFunction.toString());
+			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			eventLabel.setBounds(0, 0, 59, 14);
 			
-			deleteButton.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseUp(MouseEvent e) {
-					AtlasSet<Node> controlFlowNodesToRemove = new AtlasHashSet<Node>();
-					for(Node controlFlowNode : pcg.getControlFlowEvents()){
-						Node containingFunction = StandardQueries.getContainingFunction(controlFlowNode);
-						if(function.equals(containingFunction)){
-							controlFlowNodesToRemove.add(controlFlowNode);
-						}
-					}
-					
-					if(!controlFlowNodesToRemove.isEmpty()){
-						MessageBox messageBox = new MessageBox(Display.getCurrent().getActiveShell(),
-								SWT.ICON_QUESTION | SWT.YES | SWT.NO);
-						messageBox.setMessage("Removing this function from the call graph context would remove " 
-								+ controlFlowNodesToRemove.size() + " control flow events. Would you like to proceed?");
-						messageBox.setText("Removing Control Flow Events");
-						int response = messageBox.open();
-						if (response == SWT.YES) {
-							pcg.removeCallGraphFunction(function);
-							refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-							for(Node controlFlowEventToRemove : controlFlowNodesToRemove){
-								pcg.removeControlFlowEvent(controlFlowEventToRemove);
-							}
-							refreshControlFlowEventElements(controlFlowEventsScrolledComposite, pcg);
-						}
-					} else {
-						pcg.removeCallGraphFunction(function);
-						refreshCallGraphElements(entryFunctionsGroup, entryFunctionsScrolledComposite, controlFlowEventsScrolledComposite, pcg);
-					}
-				}
-			});
+			eventLabel.setText(StandardQueries.getQualifiedFunctionName(ancestorFunction));
 		}
-		entryFunctionsScrolledComposite.setContent(entryFunctionsScrolledCompositeContent);
-		entryFunctionsScrolledComposite.setMinSize(entryFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+		ancestorFunctionsScrolledComposite.setContent(ancestorFunctionsScrolledCompositeContent);
+		ancestorFunctionsScrolledComposite.setMinSize(ancestorFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
-	private void refreshControlFlowEventElements(final ScrolledComposite controlFlowEventsScrolledComposite, final PCGComponents pcg) {
+	private void refreshControlFlowEvents(final ScrolledComposite controlFlowEventsScrolledComposite, final ScrolledComposite containingFunctionsScrolledComposite, final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
 		Composite controlFlowEventsScrolledCompositeContent = new Composite(controlFlowEventsScrolledComposite, SWT.NONE);
 		for(final Node event : pcg.getControlFlowEvents()){
 			controlFlowEventsScrolledCompositeContent.setLayout(new GridLayout(1, false));
@@ -419,12 +400,120 @@ public class PCGBuilderView extends ViewPart {
 				@Override
 				public void mouseUp(MouseEvent e) {
 					pcg.removeControlFlowEvent(event);
-					refreshControlFlowEventElements(controlFlowEventsScrolledComposite, pcg);
+					refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+					refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+					refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+					refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
 				}
 			});
 		}
 		controlFlowEventsScrolledComposite.setContent(controlFlowEventsScrolledCompositeContent);
 		controlFlowEventsScrolledComposite.setMinSize(controlFlowEventsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+	}
+	
+	private void refreshExpandableFunctions(final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+		Composite expandableFunctionsScrolledCompositeContent = new Composite(expandableFunctionsScrolledComposite, SWT.NONE);
+
+		boolean isFirst = true;
+		for(final Node expandableFunction : pcg.getExpandableFunctions()){
+			expandableFunctionsScrolledCompositeContent.setLayout(new GridLayout(1, false));
+			
+			if(isFirst){
+				isFirst = false;
+			} else {
+				Label containingFunctionsSeperatorLabel = new Label(expandableFunctionsScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
+				containingFunctionsSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			}
+			
+			Composite expandableFunctionsComposite = new Composite(expandableFunctionsScrolledCompositeContent, SWT.NONE);
+			expandableFunctionsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+			expandableFunctionsComposite.setLayout(new GridLayout(2, false));
+			
+			final Button expandFunctionCheckbox = new Button(expandableFunctionsComposite, SWT.CHECK);
+			expandFunctionCheckbox.addSelectionListener(new SelectionAdapter() {
+		        @Override
+		        public void widgetSelected(SelectionEvent event) {
+		            Button checkbox = (Button) event.getSource();
+		            if(checkbox.getSelection()){
+		            	pcg.addExpandedFunction(expandableFunction);
+		            } else {
+		            	pcg.removeExpandedFunction(expandableFunction);
+		            }
+		        }
+		    });
+
+			Label eventLabel = new Label(expandableFunctionsComposite, SWT.NONE);
+			eventLabel.setToolTipText(expandableFunction.toString());
+			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			eventLabel.setBounds(0, 0, 59, 14);
+			
+			eventLabel.setText(StandardQueries.getQualifiedFunctionName(expandableFunction));
+		}
+	
+		expandableFunctionsScrolledComposite.setContent(expandableFunctionsScrolledCompositeContent);
+		expandableFunctionsScrolledComposite.setMinSize(expandableFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+	}
+	
+	private void refreshContainingFunctions(final ScrolledComposite controlFlowEventsScrolledComposite, final ScrolledComposite containingFunctionsScrolledComposite, final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+		Composite containingFunctionsScrolledCompositeContent = new Composite(containingFunctionsScrolledComposite, SWT.NONE);
+
+		boolean isFirst = true;
+		for(final Node function : pcg.getContainingFunctions()){
+			containingFunctionsScrolledCompositeContent.setLayout(new GridLayout(1, false));
+			
+			if(isFirst){
+				isFirst = false;
+			} else {
+				Label containingFunctionsSeperatorLabel = new Label(containingFunctionsScrolledCompositeContent, SWT.SEPARATOR | SWT.HORIZONTAL);
+				containingFunctionsSeperatorLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			}
+			
+			Composite containingFunctionsEntryComposite = new Composite(containingFunctionsScrolledCompositeContent, SWT.NONE);
+			containingFunctionsEntryComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+			containingFunctionsEntryComposite.setLayout(new GridLayout(2, false));
+			
+			final Label deleteButton = new Label(containingFunctionsEntryComposite, SWT.NONE);
+			deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true, 1, 1));
+			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
+
+			Label functionLabel = new Label(containingFunctionsEntryComposite, SWT.NONE);
+			functionLabel.setToolTipText(function.toString());
+			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+			functionLabel.setBounds(0, 0, 59, 14);
+			functionLabel.setText(StandardQueries.getQualifiedFunctionName(function));
+			
+			deleteButton.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseUp(MouseEvent e) {
+					// if there is a containing function there are corresponding events that need to be removed
+					AtlasSet<Node> controlFlowNodesToRemove = new AtlasHashSet<Node>();
+					for(Node controlFlowNode : pcg.getControlFlowEvents()){
+						Node containingFunction = StandardQueries.getContainingFunction(controlFlowNode);
+						if(function.equals(containingFunction)){
+							controlFlowNodesToRemove.add(controlFlowNode);
+						}
+					}
+					
+					MessageBox messageBox = new MessageBox(Display.getCurrent().getActiveShell(),
+							SWT.ICON_QUESTION | SWT.YES | SWT.NO);
+					messageBox.setMessage("Removing this function from the call graph context would remove " 
+							+ controlFlowNodesToRemove.size() + " control flow events. Would you like to proceed?");
+					messageBox.setText("Removing Control Flow Events");
+					int response = messageBox.open();
+					if (response == SWT.YES) {
+						for(Node controlFlowEventToRemove : controlFlowNodesToRemove){
+							pcg.removeControlFlowEvent(controlFlowEventToRemove);
+						}
+						refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+						refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+						refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
+						refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
+					}
+				}
+			});
+		}
+		containingFunctionsScrolledComposite.setContent(containingFunctionsScrolledCompositeContent);
+		containingFunctionsScrolledComposite.setMinSize(containingFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
 	private AtlasSet<Node> getFilteredSelections(String... tags){

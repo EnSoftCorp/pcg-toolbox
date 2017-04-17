@@ -21,6 +21,24 @@ import com.ensoftcorp.open.pcg.factory.PCGFactory;
 
 public class IPCG2 {
 
+	public static Q getAncestorFunctions(Q events){
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Q eventFunctions = getFunctionsContainingEvents(events);
+		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, Common.empty());
+		Q ipcgFunctions = ipcgCallGraph.retainNodes();
+		Q callEdges = Common.universe().edges(XCSG.Call);
+		return callEdges.reverse(ipcgFunctions).difference(ipcgFunctions);
+	}
+	
+	public static Q getExpandableFunctions(Q events, Q selectedAncestors){
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Q eventFunctions = getFunctionsContainingEvents(events);
+		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, selectedAncestors);
+		Q ipcgFunctions = ipcgCallGraph.retainNodes();
+		Q expandableFunctions = ipcgCallGraph.retainNodes().difference(eventFunctions);
+		return expandableFunctions;
+	}
+	
 	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions){
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Q eventFunctions = getFunctionsContainingEvents(events);
@@ -65,8 +83,6 @@ public class IPCG2 {
 			pcgs.add(pcg.eval());
 		}
 		
-//		Q nonExpandedFunctions = ipcgFunctions.difference(expandedFunctions);
-		
 		// union all the pcgs together
 		AtlasSet<Edge> resultEdges = new AtlasHashSet<Edge>();
 		AtlasSet<Node> resultNodes = new AtlasHashSet<Node>();
@@ -82,40 +98,6 @@ public class IPCG2 {
 		Q ipcg = Common.toQ(new UncheckedGraph(resultNodes, resultEdges));
 		return ipcg.union(ipcgCallGraph);
 	}
-	
-//	/**
-//	 * Given a set of control flow nodes for XCSG.CallSite's, return the
-//	 * corresponding function target (note there could be multiple conservatives
-//	 * results)
-//	 * 
-//	 * @param callsiteCFNodes
-//	 * @param ipgCallGraph
-//	 * @return
-//	 */
-//	private static AtlasSet<Node> findFunctionsForCallSites(Q callsiteCFNodes) {
-//		AtlasSet<Node> functionTargets = new AtlasHashSet<Node>();		
-//		callsiteCFNodes = callsiteCFNodes.intersection(Common.universe().nodes(XCSG.CallSite).parent());
-//
-//		// TODO: resolve dynamic dispatches in java, for now just cheating with a forward from CF node on per control call edges
-//		// this could be satisfied with CallSiteAnalysis.getTargetMethods in JavaCommonsToolbox
-//		// ...but can we do this agnostic of the language...without PER_CONTROL_FLOW CALL edges...
-//		Q perControlCallEdges = Common.universe().edgesTaggedWithAny(Attr.Edge.CALL, XCSG.Call).retainEdges();
-//		Q perControlCallTargets = perControlCallEdges.successors(callsiteCFNodes);
-//		functionTargets.addAll(perControlCallTargets.eval().nodes());
-//
-//		// this is the start of the proper way to do it and works for C (except for function pointer calls...)
-//		// however for Java it could pull in this like Java interface methods
-//		// ...so only do it if the forwardCallFromTarget just contains the original function
-//		// so this really only come into play for C codes since Java will have the Attr.Edge.CALL edges
-//		if(functionTargets.size() == 1){
-//			Q callsiteDFNode = callsiteCFNodes.children().nodesTaggedWithAny(XCSG.CallSite);
-//			Q callsiteTarget = Common.universe().edgesTaggedWithAny(XCSG.InvokedFunction, XCSG.InvokedSignature).successors(callsiteDFNode);
-//			Q targets = Common.universe().edgesTaggedWithAny(XCSG.Call).successors(callsiteTarget);
-//			functionTargets.addAll(targets.eval().nodes());
-//		}
-//		
-//		return functionTargets;
-//	}
 	
 	private static Q getIPCGCallGraph(Q eventFunctions, Q selectedAncestors){
 		Q callEdges = Common.universe().edges(XCSG.Call);

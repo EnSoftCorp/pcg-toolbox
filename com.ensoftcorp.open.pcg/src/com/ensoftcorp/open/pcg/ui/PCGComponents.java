@@ -3,18 +3,25 @@ package com.ensoftcorp.open.pcg.ui;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
+import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.script.Common;
+import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.pcg.common.IPCG2;
 
 public class PCGComponents implements Comparable<PCGComponents> {
 	private String name;
 	private long createdAt;
-	private AtlasSet<Node> callGraphFunctions;
 	private AtlasSet<Node> controlFlowEvents;
+	private AtlasSet<Node> includedAncestors;
+	private AtlasSet<Node> expandedFunctions;
 
 	public PCGComponents(String name) {
 		this.name = name;
 		this.createdAt = System.currentTimeMillis();
-		this.callGraphFunctions = new AtlasHashSet<Node>();
 		this.controlFlowEvents = new AtlasHashSet<Node>();
+		this.includedAncestors = new AtlasHashSet<Node>();
+		this.expandedFunctions = new AtlasHashSet<Node>();
 	}
 	
 	public String getName() {
@@ -24,25 +31,50 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	public void setName(String name) {
 		this.name = name;
 	}
-	
-	public AtlasSet<Node> getCallGraphFunctions() {
-		return callGraphFunctions;
-	}
-	
-	public void setCallGraphFunctions(AtlasSet<Node> callGraphFunctions) {
-		this.callGraphFunctions = callGraphFunctions;
-	}
-
-	public boolean addCallGraphFunctions(AtlasSet<Node> callGraphFunctions){
-		return this.callGraphFunctions.addAll(callGraphFunctions);
-	}
-	
-	public boolean removeCallGraphFunction(Node callGraphFunction){
-		return this.callGraphFunctions.remove(callGraphFunction);
-	}
 
 	public AtlasSet<Node> getControlFlowEvents() {
 		return controlFlowEvents;
+	}
+	
+	public void addExpandedFunction(Node expandableFunction) {
+		if(getExpandableFunctions().contains(expandableFunction)){
+			expandedFunctions.add(expandableFunction);
+		}
+	}
+	
+	public void removeExpandedFunction(Node expandableFunction) {
+		expandedFunctions.remove(expandableFunction);
+	}
+	
+	public AtlasSet<Node> getExpandableFunctions() {
+		return IPCG2.getExpandableFunctions(Common.toQ(getControlFlowEvents()), Common.toQ(getIncludedAncestorFunctions())).eval().nodes();
+	}
+	
+	public AtlasSet<Node> getExpandedFunctions() {
+		return expandedFunctions;
+	}
+	
+	public void addIncludedAncestorFunction(Node ancestorFunction) {
+		if(getAncestorFunctions().contains(ancestorFunction)){
+			includedAncestors.add(ancestorFunction);
+		}
+	}
+	
+	public void removeIncludedAncestorFunction(Node ancestorFunction) {
+		includedAncestors.remove(ancestorFunction);
+	}
+	
+	public AtlasSet<Node> getIncludedAncestorFunctions(){
+		return includedAncestors;
+	}
+	
+	public AtlasSet<Node> getAncestorFunctions(){
+		return IPCG2.getAncestorFunctions(Common.toQ(getControlFlowEvents())).eval().nodes();
+	}
+	
+	public AtlasSet<Node> getContainingFunctions(){
+		Q containingFunctions = StandardQueries.getContainingFunctions(Common.toQ(getControlFlowEvents()));
+		return containingFunctions.eval().nodes();
 	}
 
 	public void setControlFlowEvents(AtlasSet<Node> controlFlowEvents) {
@@ -86,4 +118,5 @@ public class PCGComponents implements Comparable<PCGComponents> {
 			return false;
 		return true;
 	}
+
 }
