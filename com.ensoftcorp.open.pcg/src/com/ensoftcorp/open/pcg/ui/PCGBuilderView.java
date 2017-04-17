@@ -63,15 +63,128 @@ public class PCGBuilderView extends ViewPart {
 	private AtlasSet<Node> selection = new AtlasHashSet<Node>();
 
 	private static Map<String,PCGComponents> pcgs = new HashMap<String,PCGComponents>();
+	private static PCGBuilderView VIEW;
 	
 	private static boolean initialized = false;
 	private static int pcgCounter = 1;
+	
+	public static class PCGBuilder {
+		public static PCGBuilderComponents get(String name){
+			if(!pcgs.containsKey(name)){
+				throw new IllegalArgumentException("PCG instance does not exist.");
+			}
+			return new PCGBuilderComponents(name);
+		}
+	}
+	
+	public static class PCGBuilderComponents {
+		private String name;
+
+		private PCGBuilderComponents(String name){
+			this.name = name;
+		}
+		
+		public boolean addEvents(Q events){
+			events = events.nodes(XCSG.ControlFlow_Node);
+			if(events.eval().nodes().isEmpty()){
+				throw new IllegalArgumentException("No selected control flow events");
+			}
+			final PCGComponents pcg = pcgs.get(name);
+			if(pcg == null){
+				throw new IllegalArgumentException("PCG instance no longer exists.");
+			}
+			boolean result = pcg.addControlFlowEvents(events.eval().nodes());
+			Display.getDefault().asyncExec(new Runnable(){
+				@Override
+				public void run() {
+					VIEW.refreshAll(pcg);
+				}
+			});
+			return result;
+		}
+		
+		public boolean removeEvents(Q events){
+			events = events.nodes(XCSG.ControlFlow_Node);
+			if(events.eval().nodes().isEmpty()){
+				throw new IllegalArgumentException("No selected control flow events");
+			}
+			final PCGComponents pcg = pcgs.get(name);
+			if(pcg == null){
+				throw new IllegalArgumentException("PCG instance no longer exists.");
+			}
+			boolean result = pcg.removeControlFlowEvents(events.eval().nodes());
+			Display.getDefault().asyncExec(new Runnable(){
+				@Override
+				public void run() {
+					VIEW.refreshAll(pcg);
+				}
+			});
+			return result;
+		}
+		
+		public void setEvents(Q events){
+			events = events.nodes(XCSG.ControlFlow_Node);
+			if(events.eval().nodes().isEmpty()){
+				throw new IllegalArgumentException("No selected control flow events");
+			}
+			final PCGComponents pcg = pcgs.get(name);
+			if(pcg == null){
+				throw new IllegalArgumentException("PCG instance no longer exists.");
+			}
+			pcg.setControlFlowEvents(events.eval().nodes());
+			Display.getDefault().asyncExec(new Runnable(){
+				@Override
+				public void run() {
+					VIEW.refreshAll(pcg);
+				}
+			});
+		}
+		
+		@Override
+		public String toString() {
+			final PCGComponents pcg = pcgs.get(name);
+			if(pcg == null){
+				throw new IllegalArgumentException("PCG instance no longer exists.");
+			}
+			return "PCGBuilderComponents [name=" + name + ", #events=" + pcg.getControlFlowEvents().size() + "]";
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PCGBuilderComponents other = (PCGBuilderComponents) obj;
+			if (name == null) {
+				if (other.name != null)
+					return false;
+			} else if (!name.equals(other.name))
+				return false;
+			return true;
+		}
+	}
+	
+	private ScrolledComposite controlFlowEventsScrolledComposite;
+	private ScrolledComposite containingFunctionsScrolledComposite;
+	private ScrolledComposite ancestorFunctionsScrolledComposite;
+	private ScrolledComposite expandableFunctionsScrolledComposite;
 	
 	/**
 	 * The constructor.
 	 */
 	public PCGBuilderView() {
-		// intentionally left blank
+		VIEW = this;
 	}
 	
 	@Override
@@ -80,7 +193,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		final CTabFolder pcgFolder = new CTabFolder(parent, SWT.CLOSE);
 		pcgFolder.setBorderVisible(true);
-		pcgFolder.setSimple(false); // adds the Eclise style "swoosh"
+		pcgFolder.setSimple(false); // adds the Eclipse style "swoosh"
 		
 		// add a prompt to ask if we should really close the builder tab
 		pcgFolder.addCTabFolder2Listener(new CTabFolder2Adapter() {
@@ -223,7 +336,7 @@ public class PCGBuilderView extends ViewPart {
 		addControlFlowEventsButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		addControlFlowEventsButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/add_button.png"));
 		
-		final ScrolledComposite controlFlowEventsScrolledComposite = new ScrolledComposite(eventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		controlFlowEventsScrolledComposite = new ScrolledComposite(eventsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		controlFlowEventsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		controlFlowEventsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		controlFlowEventsScrolledComposite.setExpandHorizontal(true);
@@ -233,7 +346,7 @@ public class PCGBuilderView extends ViewPart {
 		containingFunctionsGroup.setText("Containing Functions");
 		containingFunctionsGroup.setLayout(new GridLayout(1, false));
 		
-		final ScrolledComposite containingFunctionsScrolledComposite = new ScrolledComposite(containingFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		containingFunctionsScrolledComposite = new ScrolledComposite(containingFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		containingFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		containingFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		containingFunctionsScrolledComposite.setExpandHorizontal(true);
@@ -262,7 +375,7 @@ public class PCGBuilderView extends ViewPart {
 		showAncestorFunctionsButton.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
 		showAncestorFunctionsButton.setText("Show Ancestor Call Graph");
 		
-		final ScrolledComposite ancestorFunctionsScrolledComposite = new ScrolledComposite(ancestorFunctionsComposite, SWT.H_SCROLL | SWT.V_SCROLL);
+		ancestorFunctionsScrolledComposite = new ScrolledComposite(ancestorFunctionsComposite, SWT.H_SCROLL | SWT.V_SCROLL);
 		ancestorFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		ancestorFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		ancestorFunctionsScrolledComposite.setExpandHorizontal(true);
@@ -272,7 +385,7 @@ public class PCGBuilderView extends ViewPart {
 		expandableFunctionsGroup.setText("Expandable Functions");
 		expandableFunctionsGroup.setLayout(new GridLayout(1, false));
 
-		final ScrolledComposite expandableFunctionsScrolledComposite = new ScrolledComposite(expandableFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
+		expandableFunctionsScrolledComposite = new ScrolledComposite(expandableFunctionsGroup, SWT.H_SCROLL | SWT.V_SCROLL);
 		expandableFunctionsScrolledComposite.setBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
 		expandableFunctionsScrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		expandableFunctionsScrolledComposite.setExpandHorizontal(true);
@@ -295,10 +408,10 @@ public class PCGBuilderView extends ViewPart {
 						DisplayUtils.showError("Selections must correspond to control flow statements.");
 					} else {
 						if(pcg.addControlFlowEvents(controlFlowNodes)){
-							refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-							refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-							refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-							refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
+							refreshControlFlowEvents(pcg);
+							refreshContainingFunctions(pcg);
+							refreshAncestorFunctions(pcg);
+							refreshExpandableFunctions(pcg);
 						}
 					}
 				}
@@ -360,7 +473,7 @@ public class PCGBuilderView extends ViewPart {
 		pcgFolder.setSelection(pcgFolder.getItemCount()-1);
 	}
 	
-	private void refreshAncestorFunctions(final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+	private void refreshAncestorFunctions(final PCGComponents pcg) {
 		Composite ancestorFunctionsScrolledCompositeContent = new Composite(ancestorFunctionsScrolledComposite, SWT.NONE);
 		
 		for(final Node ancestorFunction : pcg.getAncestorFunctions()){
@@ -383,7 +496,7 @@ public class PCGBuilderView extends ViewPart {
 		            } else {
 		            	pcg.removeIncludedAncestorFunction(ancestorFunction);
 		            }
-		            refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
+		            refreshExpandableFunctions(pcg);
 		        }
 		    });
 
@@ -398,7 +511,7 @@ public class PCGBuilderView extends ViewPart {
 		ancestorFunctionsScrolledComposite.setMinSize(ancestorFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
-	private void refreshControlFlowEvents(final ScrolledComposite controlFlowEventsScrolledComposite, final ScrolledComposite containingFunctionsScrolledComposite, final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+	private void refreshControlFlowEvents(final PCGComponents pcg) {
 		Composite controlFlowEventsScrolledCompositeContent = new Composite(controlFlowEventsScrolledComposite, SWT.NONE);
 		for(final Node event : pcg.getControlFlowEvents()){
 			controlFlowEventsScrolledCompositeContent.setLayout(new GridLayout(1, false));
@@ -427,10 +540,7 @@ public class PCGBuilderView extends ViewPart {
 				@Override
 				public void mouseUp(MouseEvent e) {
 					pcg.removeControlFlowEvent(event);
-					refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-					refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-					refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-					refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
+					refreshAll(pcg);
 				}
 			});
 		}
@@ -438,7 +548,7 @@ public class PCGBuilderView extends ViewPart {
 		controlFlowEventsScrolledComposite.setMinSize(controlFlowEventsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
-	private void refreshExpandableFunctions(final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+	private void refreshExpandableFunctions(final PCGComponents pcg) {
 		Composite expandableFunctionsScrolledCompositeContent = new Composite(expandableFunctionsScrolledComposite, SWT.NONE);
 
 		boolean isFirst = true;
@@ -481,7 +591,7 @@ public class PCGBuilderView extends ViewPart {
 		expandableFunctionsScrolledComposite.setMinSize(expandableFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
 	
-	private void refreshContainingFunctions(final ScrolledComposite controlFlowEventsScrolledComposite, final ScrolledComposite containingFunctionsScrolledComposite, final ScrolledComposite ancestorFunctionsScrolledComposite, final ScrolledComposite expandableFunctionsScrolledComposite, final PCGComponents pcg) {
+	private void refreshContainingFunctions(final PCGComponents pcg) {
 		Composite containingFunctionsScrolledCompositeContent = new Composite(containingFunctionsScrolledComposite, SWT.NONE);
 
 		boolean isFirst = true;
@@ -531,16 +641,21 @@ public class PCGBuilderView extends ViewPart {
 						for(Node controlFlowEventToRemove : controlFlowNodesToRemove){
 							pcg.removeControlFlowEvent(controlFlowEventToRemove);
 						}
-						refreshControlFlowEvents(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-						refreshContainingFunctions(controlFlowEventsScrolledComposite, containingFunctionsScrolledComposite, ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-						refreshAncestorFunctions(ancestorFunctionsScrolledComposite, expandableFunctionsScrolledComposite, pcg);
-						refreshExpandableFunctions(expandableFunctionsScrolledComposite, pcg);
+						refreshAll(pcg);
 					}
 				}
+
 			});
 		}
 		containingFunctionsScrolledComposite.setContent(containingFunctionsScrolledCompositeContent);
 		containingFunctionsScrolledComposite.setMinSize(containingFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+	}
+	
+	private void refreshAll(final PCGComponents pcg) {
+		refreshControlFlowEvents(pcg);
+		refreshContainingFunctions(pcg);
+		refreshAncestorFunctions(pcg);
+		refreshExpandableFunctions(pcg);
 	}
 	
 	private AtlasSet<Node> getFilteredSelections(String... tags){

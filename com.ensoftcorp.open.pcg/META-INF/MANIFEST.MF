@@ -10,4 +10,5 @@ Require-Bundle: com.ensoftcorp.open.commons;bundle-version="3.0.15",
 Bundle-ActivationPolicy: lazy
 Bundle-Vendor: EnSoft Corp.
 Export-Package: com.ensoftcorp.open.pcg.common,
- com.ensoftcorp.open.pcg.factory
+ com.ensoftcorp.open.pcg.factory,
+ com.ensoftcorp.open.pcg.ui

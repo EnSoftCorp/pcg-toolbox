@@ -85,6 +85,14 @@ public class PCGComponents implements Comparable<PCGComponents> {
 		return this.controlFlowEvents.addAll(controlFlowEvents);
 	}
 	
+	public boolean removeControlFlowEvents(AtlasSet<Node> controlFlowEvents) {
+		boolean result = false;
+		for(Node event : controlFlowEvents){
+			result |= this.controlFlowEvents.remove(event);
+		}
+		return result;
+	}
+	
 	public boolean removeControlFlowEvent(Node controlFlowEvent) {
 		return this.controlFlowEvents.remove(controlFlowEvent);
 	}
