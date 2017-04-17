@@ -168,7 +168,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		Composite pcgControlPanelComposite = new Composite(pcgComposite, SWT.NONE);
 		pcgControlPanelComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-		pcgControlPanelComposite.setLayout(new GridLayout(3, false));
+		pcgControlPanelComposite.setLayout(new GridLayout(4, false));
 		
 		Label pcgNameLabel = new Label(pcgControlPanelComposite, SWT.NONE);
 		pcgNameLabel.setSize(66, 14);
@@ -189,6 +189,10 @@ public class PCGBuilderView extends ViewPart {
 				}
 			}
 		});
+		
+		Button includeCallGraphCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+		includeCallGraphCheckbox.setSelection(true);
+		includeCallGraphCheckbox.setText("Show Call Edges");
 		
 		final Button showButton = new Button(pcgControlPanelComposite, SWT.NONE);
 		showButton.setText("Show PCG");
@@ -312,6 +316,9 @@ public class PCGBuilderView extends ViewPart {
 					Q includedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 					Q expandedFunctions = Common.toQ(pcg.getExpandedFunctions());
 					Q pcgResult = IPCG2.getIPCG(events, includedAncestors, expandedFunctions);
+					if(!includeCallGraphCheckbox.getSelection()){
+						pcgResult = pcgResult.difference(Common.universe().edges(XCSG.Call).retainEdges());
+					}
 					Markup pcgResultMarkup = HighlighterUtils.getIPCG2Markup(pcgResult, events, includedAncestors, expandedFunctions);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
@@ -327,6 +334,11 @@ public class PCGBuilderView extends ViewPart {
 				} else {
 					Q containingFunctions = Common.toQ(pcg.getContainingFunctions());
 					
+					Markup markup = new Markup();
+					
+					// color the functions containing events
+					markup.setNode(containingFunctions, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
+					
 					Graph ancestorIPCGCallGraph = IPCG2.getIPCGCallGraph(containingFunctions, Common.toQ(pcg.getAncestorFunctions())).eval();
 					AtlasSet<Edge> ancestorIPCGCallGraphEdges = new AtlasHashSet<Edge>();
 					ancestorIPCGCallGraphEdges.addAll(ancestorIPCGCallGraph.edges());
@@ -336,7 +348,6 @@ public class PCGBuilderView extends ViewPart {
 					}
 					
 					// color the ancestor call edges (that could be optionally included as dashed gray edges)
-					Markup markup = new Markup();
 					markup.setEdge(Common.toQ(ancestorIPCGCallGraphEdges), MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
 					markup.setEdge(Common.toQ(ancestorIPCGCallGraphEdges), MarkupProperty.EDGE_COLOR, Color.GRAY);
 					

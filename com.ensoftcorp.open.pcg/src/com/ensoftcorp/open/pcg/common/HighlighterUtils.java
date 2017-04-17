@@ -53,29 +53,32 @@ public class HighlighterUtils {
 		Q ipcgCallGraph = IPCG2.getIPCGCallGraph(eventFunctions, selectedAncestors);
 		Q ipcgFunctions = ipcgCallGraph.retainNodes();
 		Q expandableFunctions = ipcgCallGraph.retainNodes().difference(eventFunctions);
-		Q ancestorFunctions = IPCG2.getAncestorFunctions(events);
+		Q implicitCallsiteEvents = Common.toQ(IPCG2.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
 		
 		Markup m = new Markup();
 		
 		// color the selected events
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
+		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 		
-		// make expandable functions dotted
-		m.setNode(expandableFunctions, MarkupProperty.NODE_BORDER_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+//		// make expandable functions dotted
+//		m.setNode(expandableFunctions, MarkupProperty.NODE_BORDER_COLOR, Color.GRAY);
 		
-		// highlight border of ancestor functions
-		m.setNode(ancestorFunctions, MarkupProperty.NODE_BORDER_COLOR, Color.RED);
+		// gray and dot the call edges
+		Q callEdges = Common.universe().edges(XCSG.Call).retainEdges();
+		m.setEdge(callEdges, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+//		m.setEdge(callEdges, MarkupProperty.EDGE_COLOR, Color.GRAY);
 		
-		// set ipcg callsite control flow gray
-		AtlasSet<Edge> iPCGEdgesEntryOrExit = new AtlasHashSet<Edge>();
-		for(Edge edge : ipcg.eval().edges()) {
-			GraphElement from = edge.getNode(EdgeDirection.FROM);
-			GraphElement to = edge.getNode(EdgeDirection.TO);
-			if(from.taggedWith(PCGNode.EventFlow_Master_Entry) || to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
-				iPCGEdgesEntryOrExit.add(edge);
-			}
-		}
-		m.setEdge(Common.toQ(iPCGEdgesEntryOrExit), MarkupProperty.EDGE_COLOR, Color.GRAY);
+//		// set ipcg callsite control flow gray
+//		AtlasSet<Edge> iPCGEdgesEntryOrExit = new AtlasHashSet<Edge>();
+//		for(Edge edge : ipcg.eval().edges()) {
+//			GraphElement from = edge.getNode(EdgeDirection.FROM);
+//			GraphElement to = edge.getNode(EdgeDirection.TO);
+//			if(from.taggedWith(PCGNode.EventFlow_Master_Entry) || to.taggedWith(PCGNode.EventFlow_Master_Exit)) {
+//				iPCGEdgesEntryOrExit.add(edge);
+//			}
+//		}
+//		m.setEdge(Common.toQ(iPCGEdgesEntryOrExit), MarkupProperty.EDGE_COLOR, Color.GRAY);
 
 		// highlight control flow edges
 		applyHighlightsForCFEdges(m);

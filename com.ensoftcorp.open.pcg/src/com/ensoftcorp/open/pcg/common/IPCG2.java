@@ -39,6 +39,48 @@ public class IPCG2 {
 		return expandableFunctions;
 	}
 	
+	public static AtlasSet<Node> getImplicitCallsiteEvents(Q events, Q selectedAncestors, Q selectedExpansions){
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Q eventFunctions = getFunctionsContainingEvents(events);
+		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, selectedAncestors);
+		Q ipcgFunctions = ipcgCallGraph.retainNodes();
+		Q expandableFunctions = ipcgCallGraph.retainNodes().difference(eventFunctions);
+		selectedExpansions = selectedExpansions.intersection(expandableFunctions);
+		
+		AtlasSet<Edge> ipcgEdges = new AtlasHashSet<Edge>();
+		List<Graph> pcgs = new LinkedList<Graph>();
+		
+		// for each expanded function, get the target callsites within the ipcg
+		// call graph and create corresponding ipcg event edges for each callsite
+		// and finally create the pcg itself with the callsites to ipcg call graph
+		// functions added as events
+		AtlasSet<Node> implicitCallsiteEvents = new AtlasHashSet<Node>();
+		Q expandedFunctions = eventFunctions.union(selectedExpansions);
+		for(Node expandedFunction : expandedFunctions.eval().nodes()){
+			Q expandedFunctionControlFlowNodes = Common.toQ(expandedFunction).contained().nodes(XCSG.ControlFlow_Node);
+			AtlasSet<Node> expandedFunctionEvents = new AtlasHashSet<Node>();
+			expandedFunctionEvents.addAll(expandedFunctionControlFlowNodes.intersection(events).eval().nodes());
+			Q expandedFunctionCallsitesCF = Common.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
+			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
+				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
+				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
+					Q expandedFunctionCallsiteTargets = CallSiteAnalysis.getTargetMethods(expandedFunctionCallsite);
+					Q expandedFunctionCallsiteCallGraphRestrictedTargets = expandedFunctionCallsiteTargets.intersection(ipcgFunctions);
+					if(!expandedFunctionCallsiteCallGraphRestrictedTargets.eval().nodes().isEmpty()){
+						implicitCallsiteEvents.add(expandedFunctionCallsiteCF);
+					}
+				}
+			}
+		}
+		
+		// remove explict events
+		for(Node event : events.eval().nodes()){
+			implicitCallsiteEvents.remove(event);
+		}
+		
+		return implicitCallsiteEvents;
+	}
+	
 	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions){
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Q eventFunctions = getFunctionsContainingEvents(events);
