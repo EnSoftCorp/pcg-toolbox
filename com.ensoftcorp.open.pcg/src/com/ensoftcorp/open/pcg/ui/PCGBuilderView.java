@@ -50,7 +50,7 @@ import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
-import com.ensoftcorp.open.pcg.common.IPCG2;
+import com.ensoftcorp.open.pcg.common.IPCG;
 
 public class PCGBuilderView extends ViewPart {
 
@@ -428,7 +428,7 @@ public class PCGBuilderView extends ViewPart {
 					Q events = Common.toQ(pcg.getControlFlowEvents());
 					Q includedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 					Q expandedFunctions = Common.toQ(pcg.getExpandedFunctions());
-					Q pcgResult = IPCG2.getIPCG(events, includedAncestors, expandedFunctions);
+					Q pcgResult = IPCG.getIPCG(events, includedAncestors, expandedFunctions);
 					if(!includeCallGraphCheckbox.getSelection()){
 						pcgResult = pcgResult.difference(Common.universe().edges(XCSG.Call).retainEdges());
 					}
@@ -452,10 +452,10 @@ public class PCGBuilderView extends ViewPart {
 					// color the functions containing events
 					markup.setNode(containingFunctions, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 					
-					Graph ancestorIPCGCallGraph = IPCG2.getIPCGCallGraph(containingFunctions, Common.toQ(pcg.getAncestorFunctions())).eval();
+					Graph ancestorIPCGCallGraph = IPCG.getIPCGCallGraph(containingFunctions, Common.toQ(pcg.getAncestorFunctions())).eval();
 					AtlasSet<Edge> ancestorIPCGCallGraphEdges = new AtlasHashSet<Edge>();
 					ancestorIPCGCallGraphEdges.addAll(ancestorIPCGCallGraph.edges());
-					AtlasSet<Edge> ipcgCallGraphEdges = IPCG2.getIPCGCallGraph(containingFunctions, Common.empty()).eval().edges();
+					AtlasSet<Edge> ipcgCallGraphEdges = IPCG.getIPCGCallGraph(containingFunctions, Common.empty()).eval().edges();
 					for(Edge ipcgCallGraphEdge : ipcgCallGraphEdges){
 						ancestorIPCGCallGraphEdges.remove(ipcgCallGraphEdge);
 					}

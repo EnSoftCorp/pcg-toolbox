@@ -5,9 +5,8 @@ import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
-import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
-import com.ensoftcorp.open.pcg.common.IPCG2;
+import com.ensoftcorp.open.pcg.common.IPCG;
 
 public class PCGComponents implements Comparable<PCGComponents> {
 	private String name;
@@ -47,7 +46,7 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	}
 	
 	public AtlasSet<Node> getExpandableFunctions() {
-		return IPCG2.getExpandableFunctions(Common.toQ(getControlFlowEvents()), Common.toQ(getIncludedAncestorFunctions())).eval().nodes();
+		return IPCG.getExpandableFunctions(Common.toQ(getControlFlowEvents()), Common.toQ(getIncludedAncestorFunctions())).eval().nodes();
 	}
 	
 	public AtlasSet<Node> getExpandedFunctions() {
@@ -69,7 +68,7 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	}
 	
 	public AtlasSet<Node> getAncestorFunctions(){
-		return IPCG2.getAncestorFunctions(Common.toQ(getControlFlowEvents())).eval().nodes();
+		return IPCG.getAncestorFunctions(Common.toQ(getControlFlowEvents())).eval().nodes();
 	}
 	
 	public AtlasSet<Node> getContainingFunctions(){

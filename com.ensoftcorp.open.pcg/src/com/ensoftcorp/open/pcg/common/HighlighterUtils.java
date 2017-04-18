@@ -2,11 +2,8 @@ package com.ensoftcorp.open.pcg.common;
 
 import java.awt.Color;
 
-import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
-import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
-import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
@@ -49,11 +46,7 @@ public class HighlighterUtils {
 	
 	public static Markup getIPCG2Markup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
-		Q eventFunctions = IPCG2.getFunctionsContainingEvents(events);
-		Q ipcgCallGraph = IPCG2.getIPCGCallGraph(eventFunctions, selectedAncestors);
-		Q ipcgFunctions = ipcgCallGraph.retainNodes();
-		Q expandableFunctions = ipcgCallGraph.retainNodes().difference(eventFunctions);
-		Q implicitCallsiteEvents = Common.toQ(IPCG2.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
+		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
 		
 		Markup m = new Markup();
 		

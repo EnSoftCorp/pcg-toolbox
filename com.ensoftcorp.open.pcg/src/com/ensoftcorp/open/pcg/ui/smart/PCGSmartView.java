@@ -10,7 +10,7 @@ import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
-import com.ensoftcorp.open.pcg.factory.PCGFactory;
+import com.ensoftcorp.open.pcg.common.PCG;
 
 /**
  * Input:
@@ -57,7 +57,7 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 			cfg = CFG.cfg(functions); // non-exceptional
 		}
 		
-		Q pcg = PCGFactory.PCG(cfg, events);
+		Q pcg = PCG.create(cfg, events);
 		
 		// ensure original selection is visible
 		pcg = pcg.union(cfSelection.getSelectedDataFlow());
