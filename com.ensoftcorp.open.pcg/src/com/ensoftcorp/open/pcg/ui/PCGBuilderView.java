@@ -175,6 +175,8 @@ public class PCGBuilderView extends ViewPart {
 		}
 	}
 	
+	private Button exceptionalControlFlowCheckbox;
+	private Button callGraphOverlayCheckbox;
 	private ScrolledComposite controlFlowEventsScrolledComposite;
 	private ScrolledComposite containingFunctionsScrolledComposite;
 	private ScrolledComposite ancestorFunctionsScrolledComposite;
@@ -281,7 +283,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		Composite pcgControlPanelComposite = new Composite(pcgComposite, SWT.NONE);
 		pcgControlPanelComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-		pcgControlPanelComposite.setLayout(new GridLayout(4, false));
+		pcgControlPanelComposite.setLayout(new GridLayout(5, false));
 		
 		Label pcgNameLabel = new Label(pcgControlPanelComposite, SWT.NONE);
 		pcgNameLabel.setSize(66, 14);
@@ -303,9 +305,26 @@ public class PCGBuilderView extends ViewPart {
 			}
 		});
 		
-		Button includeCallGraphCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
-		includeCallGraphCheckbox.setSelection(true);
-		includeCallGraphCheckbox.setText("Show Call Edges");
+		exceptionalControlFlowCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+		exceptionalControlFlowCheckbox.setText("Exceptional Control Flow");
+		
+		exceptionalControlFlowCheckbox.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				pcg.setExceptionalControlFlow(exceptionalControlFlowCheckbox.getSelection());
+			}
+		});
+		
+		callGraphOverlayCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+		callGraphOverlayCheckbox.setSelection(true);
+		callGraphOverlayCheckbox.setText("Overlay Call Graph");
+		
+		callGraphOverlayCheckbox.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				pcg.setCallEdgeOverlay(callGraphOverlayCheckbox.getSelection());
+			}
+		});
 		
 		final Button showButton = new Button(pcgControlPanelComposite, SWT.NONE);
 		showButton.setText("Show PCG");
@@ -361,7 +380,7 @@ public class PCGBuilderView extends ViewPart {
 		
 		final Composite ancestorFunctionsComposite = new Composite(ancestorFunctionsGroup, SWT.NONE);
 		ancestorFunctionsComposite.setLayout(new GridLayout(1, false));
-		ancestorFunctionsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
+		ancestorFunctionsComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		
 //		final Label showAncestorFunctionsLabel = new Label(ancestorFunctionsComposite, SWT.NONE);
 //		showAncestorFunctionsLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false, 1, 1));
@@ -426,13 +445,13 @@ public class PCGBuilderView extends ViewPart {
 					DisplayUtils.showError("No control flow events are defined.");
 				} else {
 					Q events = Common.toQ(pcg.getControlFlowEvents());
-					Q includedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
-					Q expandedFunctions = Common.toQ(pcg.getExpandedFunctions());
-					Q pcgResult = IPCG.getIPCG(events, includedAncestors, expandedFunctions);
-					if(!includeCallGraphCheckbox.getSelection()){
+					Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
+					Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
+					Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
+					if(!callGraphOverlayCheckbox.getSelection()){
 						pcgResult = pcgResult.difference(Common.universe().edges(XCSG.Call).retainEdges());
 					}
-					Markup pcgResultMarkup = HighlighterUtils.getIPCG2Markup(pcgResult, events, includedAncestors, expandedFunctions);
+					Markup pcgResultMarkup = HighlighterUtils.getIPCG2Markup(pcgResult, events, selectedAncestors, selectedExpansions);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
 			}
@@ -501,11 +520,11 @@ public class PCGBuilderView extends ViewPart {
 		    });
 
 			Label eventLabel = new Label(ancestorFunctionsComposite, SWT.NONE);
-			eventLabel.setToolTipText(ancestorFunction.toString());
+			eventLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(ancestorFunction) + "\nAddress: " + ancestorFunction.address().toAddressString());
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
-			eventLabel.setText(StandardQueries.getQualifiedFunctionName(ancestorFunction));
+			eventLabel.setText(ancestorFunction.getAttr(XCSG.name).toString());
 		}
 		ancestorFunctionsScrolledComposite.setContent(ancestorFunctionsScrolledCompositeContent);
 		ancestorFunctionsScrolledComposite.setMinSize(ancestorFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
@@ -528,13 +547,13 @@ public class PCGBuilderView extends ViewPart {
 			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label eventLabel = new Label(controlFlowEventsEntryComposite, SWT.NONE);
-			eventLabel.setToolTipText(event.toString());
+			eventLabel.setText(event.getAttr(XCSG.name).toString());
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
 			Node function = StandardQueries.getContainingFunction(event);
-			eventLabel.setText(event.getAttr(XCSG.name).toString() 
-					+ " (" + StandardQueries.getQualifiedFunctionName(function) + ")");
+			eventLabel.setToolTipText(event.getAttr(XCSG.name).toString() 
+					+ " (" + StandardQueries.getQualifiedFunctionName(function) + ")" + "\nAddress: " + event.address().toAddressString());
 			
 			deleteButton.addMouseListener(new MouseAdapter() {
 				@Override
@@ -546,6 +565,11 @@ public class PCGBuilderView extends ViewPart {
 		}
 		controlFlowEventsScrolledComposite.setContent(controlFlowEventsScrolledCompositeContent);
 		controlFlowEventsScrolledComposite.setMinSize(controlFlowEventsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+	}
+	
+	private void refreshButtonStates(final PCGComponents pcg){
+		exceptionalControlFlowCheckbox.setSelection(pcg.isExceptionalControlFlowEnabled());
+		callGraphOverlayCheckbox.setSelection(pcg.isCallEdgeOverlayEnabled());
 	}
 	
 	private void refreshExpandableFunctions(final PCGComponents pcg) {
@@ -580,11 +604,11 @@ public class PCGBuilderView extends ViewPart {
 		    });
 
 			Label eventLabel = new Label(expandableFunctionsComposite, SWT.NONE);
-			eventLabel.setToolTipText(expandableFunction.toString());
+			eventLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(expandableFunction) + "\nAddress: " + expandableFunction.address().toAddressString());
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
-			eventLabel.setText(StandardQueries.getQualifiedFunctionName(expandableFunction));
+			eventLabel.setText(expandableFunction.getAttr(XCSG.name).toString());
 		}
 	
 		expandableFunctionsScrolledComposite.setContent(expandableFunctionsScrolledCompositeContent);
@@ -614,10 +638,10 @@ public class PCGBuilderView extends ViewPart {
 			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label functionLabel = new Label(containingFunctionsEntryComposite, SWT.NONE);
-			functionLabel.setToolTipText(function.toString());
+			functionLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(function) + "\nAddress: " + function.address().toAddressString());
 			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			functionLabel.setBounds(0, 0, 59, 14);
-			functionLabel.setText(StandardQueries.getQualifiedFunctionName(function));
+			functionLabel.setText(function.getAttr(XCSG.name).toString());
 			
 			deleteButton.addMouseListener(new MouseAdapter() {
 				@Override
@@ -631,8 +655,7 @@ public class PCGBuilderView extends ViewPart {
 						}
 					}
 					
-					MessageBox messageBox = new MessageBox(Display.getCurrent().getActiveShell(),
-							SWT.ICON_QUESTION | SWT.YES | SWT.NO);
+					MessageBox messageBox = new MessageBox(Display.getCurrent().getActiveShell(), SWT.ICON_QUESTION | SWT.YES | SWT.NO);
 					messageBox.setMessage("Removing this function from the call graph context would remove " 
 							+ controlFlowNodesToRemove.size() + " control flow events. Would you like to proceed?");
 					messageBox.setText("Removing Control Flow Events");
@@ -656,6 +679,7 @@ public class PCGBuilderView extends ViewPart {
 		refreshContainingFunctions(pcg);
 		refreshAncestorFunctions(pcg);
 		refreshExpandableFunctions(pcg);
+		refreshButtonStates(pcg);
 	}
 	
 	private AtlasSet<Node> getFilteredSelections(String... tags){

@@ -77,6 +77,10 @@ public class IPCG {
 	}
 	
 	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions){
+		return getIPCG(events, selectedAncestors, selectedExpansions, false);
+	}
+	
+	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions, boolean exceptionalControlFlow){
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Q eventFunctions = getFunctionsContainingEvents(events);
 		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, selectedAncestors);
@@ -116,7 +120,7 @@ public class IPCG {
 					}
 				}
 			}
-			Q pcg = PCG.create(Common.toQ(expandedFunctionEvents));
+			Q pcg = PCG.create(Common.toQ(expandedFunctionEvents), exceptionalControlFlow);
 			pcgs.add(pcg.eval());
 		}
 		

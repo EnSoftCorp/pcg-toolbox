@@ -120,10 +120,10 @@ public class PCG implements UniqueEntryExitGraph {
 	 * @param events
 	 * @return PCG
 	 */
-	public static Q create(Q events, boolean includeExceptionalControlFlow){
+	public static Q create(Q events, boolean exceptionalControlFlow){
 		Q functions = StandardQueries.getContainingFunctions(events);
 		Q cfg;
-		if(includeExceptionalControlFlow){
+		if(exceptionalControlFlow){
 			cfg = CFG.excfg(functions);
 		} else {
 			cfg = CFG.cfg(functions);

@@ -54,13 +54,9 @@ public class HighlighterUtils {
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 		
-//		// make expandable functions dotted
-//		m.setNode(expandableFunctions, MarkupProperty.NODE_BORDER_COLOR, Color.GRAY);
-		
 		// gray and dot the call edges
 		Q callEdges = Common.universe().edges(XCSG.Call).retainEdges();
 		m.setEdge(callEdges, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
-//		m.setEdge(callEdges, MarkupProperty.EDGE_COLOR, Color.GRAY);
 		
 //		// set ipcg callsite control flow gray
 //		AtlasSet<Edge> iPCGEdgesEntryOrExit = new AtlasHashSet<Edge>();
