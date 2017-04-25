@@ -176,7 +176,7 @@ public class PCGBuilderView extends ViewPart {
 	}
 	
 	private Button exceptionalControlFlowCheckbox;
-	private Button callGraphOverlayCheckbox;
+//	private Button callGraphOverlayCheckbox; // maybe not the best idea...messes with expandable functions concept
 	private ScrolledComposite controlFlowEventsScrolledComposite;
 	private ScrolledComposite containingFunctionsScrolledComposite;
 	private ScrolledComposite ancestorFunctionsScrolledComposite;
@@ -315,16 +315,16 @@ public class PCGBuilderView extends ViewPart {
 			}
 		});
 		
-		callGraphOverlayCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
-		callGraphOverlayCheckbox.setSelection(true);
-		callGraphOverlayCheckbox.setText("Overlay Call Graph");
-		
-		callGraphOverlayCheckbox.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				pcg.setCallEdgeOverlay(callGraphOverlayCheckbox.getSelection());
-			}
-		});
+//		callGraphOverlayCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+//		callGraphOverlayCheckbox.setSelection(true);
+//		callGraphOverlayCheckbox.setText("Overlay Call Graph");
+//		
+//		callGraphOverlayCheckbox.addSelectionListener(new SelectionAdapter() {
+//			@Override
+//			public void widgetSelected(SelectionEvent e) {
+//				pcg.setCallEdgeOverlay(callGraphOverlayCheckbox.getSelection());
+//			}
+//		});
 		
 		final Button showButton = new Button(pcgControlPanelComposite, SWT.NONE);
 		showButton.setText("Show PCG");
@@ -448,9 +448,9 @@ public class PCGBuilderView extends ViewPart {
 					Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 					Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 					Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
-					if(!callGraphOverlayCheckbox.getSelection()){
-						pcgResult = pcgResult.difference(Common.universe().edges(XCSG.Call).retainEdges());
-					}
+//					if(!callGraphOverlayCheckbox.getSelection()){
+//						pcgResult = pcgResult.difference(Common.universe().edges(XCSG.Call).retainEdges());
+//					}
 					Markup pcgResultMarkup = HighlighterUtils.getIPCG2Markup(pcgResult, events, selectedAncestors, selectedExpansions);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, true, pcg.getName());
 				}
@@ -569,7 +569,7 @@ public class PCGBuilderView extends ViewPart {
 	
 	private void refreshButtonStates(final PCGComponents pcg){
 		exceptionalControlFlowCheckbox.setSelection(pcg.isExceptionalControlFlowEnabled());
-		callGraphOverlayCheckbox.setSelection(pcg.isCallEdgeOverlayEnabled());
+//		callGraphOverlayCheckbox.setSelection(pcg.isCallEdgeOverlayEnabled());
 	}
 	
 	private void refreshExpandableFunctions(final PCGComponents pcg) {

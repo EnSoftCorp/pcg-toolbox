@@ -5,20 +5,58 @@ import java.util.List;
 
 import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.graph.UncheckedGraph;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.java.commons.analysis.CallSiteAnalysis;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
 public class IPCG {
+	
+	public static interface IPCGNode {
+		/**
+		 * Tag applied to the newly created master entry node
+		 */
+		public static final String InterproceduralEventFlow_Master_Entry = "InterproceduralEventFlow_Master_Entry";
+		
+		/**
+		 * Tag applied to the newly create master exit node
+		 */
+		public static final String InterproceduralEventFlow_Master_Exit = "InterproceduralEventFlow_Master_Exit";
+		
+		/**
+		 * Tag applied to nodes that are retained in the final PCG
+		 */
+		public static final String InterproceduralEventFlow_Node = "InterproceduralEventFlow_Node";
+		
+		/**
+		 * The name attribute applied to the EventFlow_Master_Entry of the PCG
+		 */
+		public static final String InterproceduralEventFlow_Master_Entry_Name = "\u22A4";
+		
+		/**
+		 * The name attribute applied to the EventFlow_Master_Exit of the PCG
+		 */
+		public static final String InterproceduralEventFlow_Master_Exit_Name = "\u22A5";
+	}
+	
+	public static interface IPCGEdge {
+		/**
+		 * Tag applied to CFG edges that are retained in the final PCG
+		 */
+		public static final String InterproceduralEventFlow_Edge = "InterproceduralEventFlow_Edge";
+	}
 
 	public static Q getAncestorFunctions(Q events){
 		events = events.nodes(XCSG.ControlFlow_Node);
@@ -68,7 +106,7 @@ public class IPCG {
 			}
 		}
 		
-		// remove explict events
+		// remove explicit events
 		for(Node event : events.eval().nodes()){
 			implicitCallsiteEvents.remove(event);
 		}
@@ -129,14 +167,26 @@ public class IPCG {
 		AtlasSet<Node> resultNodes = new AtlasHashSet<Node>();
 		for(Graph pcg : pcgs){
 			Q pcgQ = Common.toQ(pcg);
-			pcgQ = pcgQ.difference(pcgQ.nodes(PCGNode.EventFlow_Master_Entry, PCGNode.EventFlow_Master_Exit));
 			resultEdges.addAll(pcgQ.eval().edges());
 			resultNodes.addAll(pcgQ.eval().nodes());
 		}
+		// specifically add in the nodes for the edge since some nodes
+		// (ex: intermediate callsite targets) may not be in the resulting nodes yet
+		// this leads to really confusing behaviors later if not careful
+		for(Edge ipcgEdge : ipcgEdges){
+			resultNodes.add(ipcgEdge.from());
+			resultNodes.add(ipcgEdge.to());
+		}
 		// add in the custom ipcg edges
 		resultEdges.addAll(ipcgEdges);
+		
 		// create the resulting graph
 		Q ipcg = Common.toQ(new UncheckedGraph(resultNodes, resultEdges));
+		
+		// cleanup the master entry and exit nodes
+		ipcg = calculateMasterEntryExitNodes(ipcg, ipcgCallGraph);
+		
+		// return the ipcg with the call graph
 		return ipcg.union(ipcgCallGraph);
 	}
 	
@@ -157,24 +207,122 @@ public class IPCG {
 		if(from == null){
 			throw new IllegalArgumentException("from is null");
 		}
-		if(CommonQueries.isEmpty(Common.toQ(from).children().nodes(XCSG.CallSite))){
-			throw new IllegalArgumentException("from \"" + from.address().toAddressString() + "\" is not a Control Flow CallSite Node");
+//		boolean isCFCallsite = !CommonQueries.isEmpty(Common.toQ(from).children().nodes(XCSG.CallSite)); // a special case of CFNode
+		boolean isCFNode = from.taggedWith(XCSG.ControlFlow_Node);
+		boolean isMasterEntry = from.taggedWith(IPCGNode.InterproceduralEventFlow_Master_Entry);
+		if(!isCFNode && !isMasterEntry){
+			throw new IllegalArgumentException("from \"" + from.address().toAddressString() + "\" is not a Control Flow Node or Interprocedural EventFlow Master Entry Node");
 		}
 		if(to == null){
 			throw new IllegalArgumentException("to is null");
 		}
-		if(!to.taggedWith(XCSG.Function) && !to.taggedWith(XCSG.controlFlowRoot)){
-			throw new IllegalArgumentException("to \"" + to.address().toAddressString() + "\" is not a Function Node or a Control Flow Root");
+		
+		// TODO: is control flow root too strong here? might just be control flow node
+		boolean isCFRoot = to.taggedWith(XCSG.controlFlowRoot);
+		boolean isFunction = to.taggedWith(XCSG.Function);
+		boolean isMasterExit = to.taggedWith(IPCGNode.InterproceduralEventFlow_Master_Exit);
+		if(!isCFRoot && !isFunction && !isMasterExit){
+			throw new IllegalArgumentException("to \"" + to.address().toAddressString() + "\" is not a Function Node or a Control Flow Root or Master Exit Node");
 		}
-		Q PCGEdges = Common.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge).
-				betweenStep(Common.toQ(from), Common.toQ(to));
-		if (PCGEdges.eval().edges().isEmpty()) {
+		Q pcgEdges = Common.universe().edgesTaggedWithAny(IPCGEdge.InterproceduralEventFlow_Edge).betweenStep(Common.toQ(from), Common.toQ(to));
+		if (pcgEdges.eval().edges().isEmpty()) {
 			Edge intermediateEdge = Graph.U.createEdge(from, to);
-			intermediateEdge.tag(PCGEdge.EventFlow_Edge);
+			intermediateEdge.tag(IPCGEdge.InterproceduralEventFlow_Edge);
 			return intermediateEdge;
 		} else {
-			return PCGEdges.eval().edges().one();
+			return pcgEdges.eval().edges().one();
 		}
+	}
+
+	/**
+	 * IPCG is a concatenation of multiple PCG's each with its own entry and
+	 * exit nodes. This function, removes all those entry and exit nodes and
+	 * creates a single entry and exit node for the IPCG.
+	 * 
+	 * @param pcg
+	 * @return
+	 */
+	private static Q calculateMasterEntryExitNodes(Q ipcg, Q callGraph){
+		// get the old master entry and exit nodes
+		Q masterEntryNodes = ipcg.nodesTaggedWithAny(PCGNode.EventFlow_Master_Entry);
+		Q masterExitNodes = ipcg.nodesTaggedWithAny(PCGNode.EventFlow_Master_Exit);
+		
+		// get the call graph roots that will serve as entry points to the ipcg
+		// intentionally not retaining edges here because call graph may be
+		// disconnected or just contain one node
+		Q ipcgEntryFunctions = callGraph.roots();
+
+		// get the entry function event roots
+		Q eventEdges = ipcg.edges(PCGEdge.EventFlow_Edge);
+		Q entryFunctionEventRoots = eventEdges.successors(masterEntryNodes).intersection(CFG.cfg(ipcgEntryFunctions));
+
+		// create new master entry node
+		Node ipcgMasterEntryNode = createInterproceduralMasterEntryNode();
+		
+		// add an edge from the master entry node to each entry function event root
+		for(Node entryFunctionEventRoot : entryFunctionEventRoots.eval().nodes()){
+			Edge ipcgMasterEntryEdge = getOrCreateIPCGEdge(ipcgMasterEntryNode, entryFunctionEventRoot);
+		}
+		
+		// create new master exit node
+		Node ipcgMasterExitNode = createInterproceduralMasterExitNode();
+		
+//		// add edges to master exit from ALL pcg exits
+//		for(Node callGraphFunction : callGraph.eval().nodes()){
+//			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CFG.cfg(callGraphFunction));
+//			for(Node exitEvent : exitEvents.eval().nodes()){
+//				Edge ipcgMasterExitEdge = getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+//			}
+//		}
+		
+		// add edges to master exit from leaf function pcg exits
+		for(Node callGraphFunctionLeaf : callGraph.leaves().eval().nodes()){
+			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CFG.cfg(callGraphFunctionLeaf));
+			for(Node exitEvent : exitEvents.eval().nodes()){
+				Edge ipcgMasterExitEdge = getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+			}
+		}
+		
+		// TODO: shouldn't returns be implicit events?
+		// add premature event exist edges
+		// TODO: more cases than just control flow conditions and return statements to master exits?
+		for(Node callGraphFunctionNonLeaf : callGraph.difference(callGraph.leaves()).eval().nodes()){
+			Q controlFlowConditions = Common.universe().nodes(XCSG.ControlFlowCondition);
+			Q returnStatements = Common.universe().nodes(XCSG.ReturnValue).parent(); // return CF nodes
+			Q potentialEventExits = CFG.cfg(callGraphFunctionNonLeaf).intersection(controlFlowConditions.union(returnStatements));
+			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(potentialEventExits);
+			for(Node exitEvent : exitEvents.eval().nodes()){
+				Edge ipcgMasterExitEdge = getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+			}
+		}
+		
+		Q ipcgEdges = Common.universe().edges(IPCGEdge.InterproceduralEventFlow_Edge);
+		Q ipcgEntryEdges = ipcgEdges.forwardStep(Common.toQ(ipcgMasterEntryNode));
+		Q ipcgExitEdges = ipcgEdges.reverseStep(Common.toQ(ipcgMasterExitNode));
+		
+		// the final result is the original master entry/exit nodes removed with the new master entry/exit nodes and edges added
+		Q result = ipcg.difference(masterEntryNodes, masterExitNodes).union(ipcgEntryEdges, ipcgExitEdges);
+		return Common.toQ(result.eval());
+	}
+
+	// TODO: query if already there first, is that even possible?
+	// Idea: after the fact check if the master entry node is equivalent to one that already exists
+	private static Node createInterproceduralMasterEntryNode() {
+		Node masterEntryNode = Graph.U.createNode();
+		masterEntryNode.tag(IPCGNode.InterproceduralEventFlow_Master_Entry);
+		masterEntryNode.tag(IPCGNode.InterproceduralEventFlow_Node);
+		masterEntryNode.attr().put(XCSG.name, IPCGNode.InterproceduralEventFlow_Master_Entry_Name);
+		return masterEntryNode;
+	}
+	
+	// TODO: query if already there first, is that even possible?
+	// Idea: after the fact check if the master exit node is equivalent to one that already exists
+	private static Node createInterproceduralMasterExitNode() {
+		Node masterExitNode = Graph.U.createNode();
+		masterExitNode.tag(IPCGNode.InterproceduralEventFlow_Master_Exit);
+		masterExitNode.tag(IPCGNode.InterproceduralEventFlow_Node);
+		masterExitNode.attr().put(XCSG.name, IPCGNode.InterproceduralEventFlow_Master_Exit_Name);
+		return masterExitNode;
 	}
 	
 }
