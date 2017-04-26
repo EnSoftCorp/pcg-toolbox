@@ -7,7 +7,6 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.scripts.selections.AbstractAtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
-import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
@@ -49,15 +48,7 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 		}
 		
 		Q events = cfSelection.getImpliedControlFlow();
-		
-		Q cfg;
-		if(inlcudeExceptionalControlFlow()){
-			cfg = CFG.excfg(functions); // exceptional
-		} else {
-			cfg = CFG.cfg(functions); // non-exceptional
-		}
-		
-		Q pcg = PCG.create(cfg, events);
+		Q pcg = PCG.create(events, inlcudeExceptionalControlFlow());
 		
 		// ensure original selection is visible
 		pcg = pcg.union(cfSelection.getSelectedDataFlow());

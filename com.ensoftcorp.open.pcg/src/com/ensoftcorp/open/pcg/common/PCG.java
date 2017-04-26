@@ -15,10 +15,12 @@ import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.atlas.java.core.script.CommonQueries;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
 import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.log.Log;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 
@@ -79,31 +81,6 @@ public class PCG implements UniqueEntryExitGraph {
 	private AtlasSet<Edge> graph_edges;
 	
 	/**
-	 * Construct the PCG for the given CFG and the events of interest
-	 * @param cfg
-	 * @param function
-	 * @param events
-	 * @return PCG
-	 */
-	public static Q create(Q cfg, Q events){
-		events = events.intersection(cfg);
-		return new PCG(cfg.eval(), events.eval().nodes()).createPCG();
-	}
-	
-	/**
-	 * Construct the PCG for the given CFG, selected CFG roots, and the events of interest
-	 * @param cfg
-	 * @param function
-	 * @param events
-	 * @return PCG
-	 */
-	public static Q create(Q cfg, Q cfRoots, Q events){
-		events = events.intersection(cfg);
-		cfRoots = cfRoots.intersection(cfg);
-		return new PCG(cfg.eval(), cfRoots.eval().nodes(), events.eval().nodes()).createPCG();
-	}
-	
-	/**
 	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
 	 * @param function
 	 * @param events
@@ -128,21 +105,21 @@ public class PCG implements UniqueEntryExitGraph {
 		} else {
 			cfg = CFG.cfg(functions);
 		}
-		return create(cfg, events);
+		events = events.intersection(cfg);
+		return new PCG(cfg.eval(), cfg.nodes(XCSG.controlFlowRoot).eval().nodes(), events.eval().nodes()).createPCG();
 	}
 	
-	/** 
-	 * @param graph a ControlFlowGraph (may include ExceptionalControlFlow_Edges)
-	 * @param events the set of nodes contained within the given graph
+	/**
+	 * Construct the PCG for the given CFG, selected CFG roots, and the events of interest
+	 * @param cfg
+	 * @param function
+	 * @param events
+	 * @return PCG
 	 */
-	private PCG(Graph graph, AtlasSet<Node> events) {
-		this.events = events;
-		this.graph_nodes = new AtlasHashSet<Node>();
-		this.nodes().addAll(graph.nodes());
-		this.graph_edges = new AtlasHashSet<Edge>();
-		this.edges().addAll(graph.edges());
-		this.setupMasterEntryNode();
-		this.setupMasterExitNode();
+	public static Q create(Q cfg, Q cfRoots, Q events){
+		events = events.intersection(cfg);
+		cfRoots = cfRoots.intersection(cfg);
+		return new PCG(cfg.eval(), cfRoots.eval().nodes(), events.eval().nodes()).createPCG();
 	}
 	
 	/** 
@@ -158,15 +135,6 @@ public class PCG implements UniqueEntryExitGraph {
 		this.edges().addAll(graph.edges());
 		this.setupMasterEntryNode(roots);
 		this.setupMasterExitNode();
-	}
-	
-	/**
-	 * Creates the nodes and edges for setting up the master entry node
-	 */
-	private Node setupMasterEntryNode(){
-		AtlasSet<Node> roots = new AtlasHashSet<Node>();
-		roots.addAll(this.nodes().tagged(XCSG.controlFlowRoot));
-		return setupMasterEntryNode(roots);
 	}
 	
 	/**
@@ -436,7 +404,7 @@ public class PCG implements UniqueEntryExitGraph {
 		Q fromQ = Common.toQ(from);
 		Q toQ = Common.toQ(to);
 		AtlasSet<Edge> betweenEdges = new AtlasHashSet<Edge>();
-		AtlasSet<Edge> cfgEdges = Common.universe().edgesTaggedWithAll(XCSG.ControlFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
+		AtlasSet<Edge> cfgEdges = Common.universe().edges(XCSG.ControlFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
 		if (attrs.containsKey(XCSG.conditionValue)) {
 			betweenEdges = cfgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
 		} else {
@@ -453,7 +421,7 @@ public class PCG implements UniqueEntryExitGraph {
 		}
 
 		// 2- Check if there exist PCG edge: use it
-		AtlasSet<Edge> PCGEdges = Common.universe().edgesTaggedWithAll(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ)
+		AtlasSet<Edge> PCGEdges = Common.universe().edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ)
 				.eval().edges();
 		betweenEdges = new AtlasHashSet<Edge>();
 		if (attrs.containsKey(XCSG.conditionValue)) {
