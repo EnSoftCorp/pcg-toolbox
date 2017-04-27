@@ -9,6 +9,7 @@ import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.graph.UncheckedGraph;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
+import com.ensoftcorp.atlas.core.log.Log;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.CommonQueries;
@@ -145,12 +146,20 @@ public class IPCG {
 						expandedFunctionEvents.add(expandedFunctionCallsiteCF); // set only keeps 1 copy, ok for multiple targets
 						if(CommonQueries.isEmpty(Common.toQ(expandedFunctionCallsiteCallGraphRestrictedTarget).intersection(expandedFunctions))){
 							// target is a non-expanded function
-							Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, expandedFunctionCallsiteCallGraphRestrictedTarget);
-							ipcgEdges.add(ipcgEdge);
+							try {
+								Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, expandedFunctionCallsiteCallGraphRestrictedTarget);
+								ipcgEdges.add(ipcgEdge);
+							} catch (IllegalArgumentException e){
+								Log.error("Error creating IPCG edge", e);
+							}
 						} else {
-							Node cfRoot = Common.toQ(expandedFunctionCallsiteCallGraphRestrictedTarget).children().nodesTaggedWithAny(XCSG.controlFlowRoot).eval().nodes().one();
-							Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, cfRoot);
-							ipcgEdges.add(ipcgEdge);
+							try {
+								Node cfRoot = Common.toQ(expandedFunctionCallsiteCallGraphRestrictedTarget).children().nodesTaggedWithAny(XCSG.controlFlowRoot).eval().nodes().one();
+								Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, cfRoot);
+								ipcgEdges.add(ipcgEdge);
+							} catch (IllegalArgumentException e){
+								Log.error("Error creating IPCG edge", e);
+							}
 						}
 					}
 				}
@@ -214,8 +223,7 @@ public class IPCG {
 			throw new IllegalArgumentException("to is null");
 		}
 		
-		// TODO: is control flow root too strong here? might just be control flow node
-		boolean isCFRoot = to.taggedWith(XCSG.controlFlowRoot);
+		boolean isCFRoot = to.taggedWith(XCSG.ControlFlow_Node);
 		boolean isFunction = to.taggedWith(XCSG.Function);
 		boolean isMasterExit = to.taggedWith(IPCGNode.InterproceduralEventFlow_Master_Exit);
 		if(!isCFRoot && !isFunction && !isMasterExit){
@@ -258,7 +266,11 @@ public class IPCG {
 		
 		// add an edge from the master entry node to each entry function event root
 		for(Node entryFunctionEventRoot : entryFunctionEventRoots.eval().nodes()){
-			getOrCreateIPCGEdge(ipcgMasterEntryNode, entryFunctionEventRoot);
+			try {
+				getOrCreateIPCGEdge(ipcgMasterEntryNode, entryFunctionEventRoot);
+			} catch (IllegalArgumentException e){
+				Log.error("Error creating IPCG edge", e);
+			}
 		}
 		
 		// create new master exit node
@@ -276,7 +288,11 @@ public class IPCG {
 		for(Node callGraphFunctionLeaf : callGraph.leaves().eval().nodes()){
 			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CFG.cfg(callGraphFunctionLeaf));
 			for(Node exitEvent : exitEvents.eval().nodes()){
-				getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+				try {
+					getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+				} catch (IllegalArgumentException e){
+					Log.error("Error creating IPCG edge", e);
+				}
 			}
 		}
 		
@@ -289,7 +305,11 @@ public class IPCG {
 			Q potentialEventExits = CFG.cfg(callGraphFunctionNonLeaf).intersection(controlFlowConditions.union(returnStatements));
 			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(potentialEventExits);
 			for(Node exitEvent : exitEvents.eval().nodes()){
-				getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+				try {
+					getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
+				} catch (IllegalArgumentException e){
+					Log.error("Error creating IPCG edge", e);
+				}
 			}
 		}
 		
