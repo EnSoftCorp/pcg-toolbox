@@ -71,7 +71,9 @@ public class PCGBuilderView extends ViewPart {
 	public static class PCGBuilder {
 		public static PCGBuilderComponents get(String name){
 			if(!pcgs.containsKey(name)){
-				throw new IllegalArgumentException("PCG instance does not exist.");
+				int PCG_NUMBER = (pcgCounter++);
+				PCGComponents pcg = new PCGComponents(name);
+				pcgs.put(name, pcg);
 			}
 			return new PCGBuilderComponents(name);
 		}
