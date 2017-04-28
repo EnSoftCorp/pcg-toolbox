@@ -71,9 +71,16 @@ public class PCGBuilderView extends ViewPart {
 	public static class PCGBuilder {
 		public static PCGBuilderComponents get(String name){
 			if(!pcgs.containsKey(name)){
-				int PCG_NUMBER = (pcgCounter++);
+				pcgCounter++;
 				PCGComponents pcg = new PCGComponents(name);
 				pcgs.put(name, pcg);
+				Display.getDefault().asyncExec(new Runnable(){
+					@Override
+					public void run() {
+						VIEW.addPCG(VIEW.pcgFolder, pcg);
+						VIEW.setFocus(pcg);
+					}
+				});
 			}
 			return new PCGBuilderComponents(name);
 		}
@@ -100,6 +107,7 @@ public class PCGBuilderView extends ViewPart {
 				@Override
 				public void run() {
 					VIEW.refreshAll(pcg);
+					VIEW.setFocus(pcg);
 				}
 			});
 			return result;
@@ -119,6 +127,7 @@ public class PCGBuilderView extends ViewPart {
 				@Override
 				public void run() {
 					VIEW.refreshAll(pcg);
+					VIEW.setFocus(pcg);
 				}
 			});
 			return result;
@@ -138,6 +147,7 @@ public class PCGBuilderView extends ViewPart {
 				@Override
 				public void run() {
 					VIEW.refreshAll(pcg);
+					VIEW.setFocus(pcg);
 				}
 			});
 		}
@@ -191,11 +201,37 @@ public class PCGBuilderView extends ViewPart {
 		VIEW = this;
 	}
 	
+	private static String getUniqueName(String pcgName){
+		int suffix = 2;
+		while(pcgs.containsKey(pcgName)){
+			pcgName = pcgName + "_" + (suffix++);
+		}
+		return pcgName;
+	}
+	
+	private void setFocus(PCGComponents pcg){
+		int index = 0;
+		ArrayList<PCGComponents> sortedPCGs = new ArrayList<PCGComponents>(pcgs.values());
+		Collections.sort(sortedPCGs); // sorted by creation time
+		for(PCGComponents sortedPCG : sortedPCGs){
+			if(pcg.equals(sortedPCG)){
+				break;
+			} else {
+				index++;
+			}
+		}
+		if(index <= pcgFolder.getItemCount()-1){
+			pcgFolder.setSelection(index);
+		}
+	}
+	
+	private CTabFolder pcgFolder;
+	
 	@Override
 	public void createPartControl(Composite parent) {
 		parent.setLayout(new GridLayout(1, false));
 		
-		final CTabFolder pcgFolder = new CTabFolder(parent, SWT.CLOSE);
+		pcgFolder = new CTabFolder(parent, SWT.CLOSE);
 		pcgFolder.setBorderVisible(true);
 		pcgFolder.setSimple(false); // adds the Eclipse style "swoosh"
 		
@@ -239,7 +275,7 @@ public class PCGBuilderView extends ViewPart {
 		final Action addPCGAction = new Action() {
 			public void run() {
 				int PCG_NUMBER = (pcgCounter++);
-				String PCG_NAME = "PCG" + PCG_NUMBER;
+				String PCG_NAME = getUniqueName("PCG" + PCG_NUMBER);
 				PCGComponents pcg = new PCGComponents(PCG_NAME);
 				pcgs.put(PCG_NAME, pcg);
 				addPCG(pcgFolder, pcg);

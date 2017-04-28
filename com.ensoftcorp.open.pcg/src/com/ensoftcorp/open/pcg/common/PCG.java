@@ -15,14 +15,12 @@ import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
-import com.ensoftcorp.atlas.java.core.script.CommonQueries;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
+import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 import com.ensoftcorp.open.commons.analysis.CFG;
 import com.ensoftcorp.open.commons.analysis.StandardQueries;
-import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.log.Log;
-import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 
 /**
  * A class that implements the event flow graph transformations to transform a given CFG into PCG
