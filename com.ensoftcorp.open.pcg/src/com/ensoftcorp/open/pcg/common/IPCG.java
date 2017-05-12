@@ -15,8 +15,8 @@ import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.java.commons.analysis.CallSiteAnalysis;
-import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
-import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
+import com.ensoftcorp.open.pcg.common.PCGFactory.PCG.PCGEdge;
+import com.ensoftcorp.open.pcg.common.PCGFactory.PCG.PCGNode;
 
 public class IPCG {
 	
@@ -162,7 +162,7 @@ public class IPCG {
 					}
 				}
 			}
-			Q pcg = PCG.create(Common.toQ(expandedFunctionEvents), exceptionalControlFlow);
+			Q pcg = PCGFactory.create(Common.toQ(expandedFunctionEvents), exceptionalControlFlow).getPCG();
 			pcgs.add(pcg.eval());
 		}
 		
