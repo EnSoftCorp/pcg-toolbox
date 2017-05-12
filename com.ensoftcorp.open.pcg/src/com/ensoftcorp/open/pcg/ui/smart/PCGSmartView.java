@@ -7,7 +7,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.scripts.selections.AbstractAtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
 
@@ -120,7 +120,7 @@ public class PCGSmartView extends AbstractAtlasSmartViewScript implements AtlasS
 			
 			Q impliedControlFlow = selectedControlFlow.union(selectedDataFlow.parent());
 			
-			Q impliedFunctions = selectedFunctions.union(StandardQueries.getContainingFunctions(selectedControlFlow.union(selectedDataFlow)));
+			Q impliedFunctions = selectedFunctions.union(CommonQueries.getContainingFunctions(selectedControlFlow.union(selectedDataFlow)));
 			
 			return new ControlFlowSelection(selectedFunctions, selectedDataFlow, selectedControlFlow, impliedControlFlow, impliedFunctions);
 		}

@@ -18,8 +18,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
-import com.ensoftcorp.open.commons.analysis.CFG;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.pcg.log.Log;
 
 /**
@@ -96,12 +95,12 @@ public class PCG implements UniqueEntryExitGraph {
 	 * @return PCG
 	 */
 	public static Q create(Q events, boolean exceptionalControlFlow){
-		Q functions = StandardQueries.getContainingFunctions(events);
+		Q functions = CommonQueries.getContainingFunctions(events);
 		Q cfg;
 		if(exceptionalControlFlow){
-			cfg = CFG.excfg(functions);
+			cfg = CommonQueries.excfg(functions);
 		} else {
-			cfg = CFG.cfg(functions);
+			cfg = CommonQueries.cfg(functions);
 		}
 		events = events.intersection(cfg);
 		return new PCG(cfg.eval(), cfg.nodes(XCSG.controlFlowRoot).eval().nodes(), events.eval().nodes()).createPCG();

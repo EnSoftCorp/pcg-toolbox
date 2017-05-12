@@ -12,10 +12,8 @@ import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.log.Log;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
-import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
-import com.ensoftcorp.open.commons.analysis.CFG;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.java.commons.analysis.CallSiteAnalysis;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
@@ -198,7 +196,7 @@ public class IPCG {
 	
 	public static Q getFunctionsContainingEvents(Q events){
 		events = events.nodes(XCSG.ControlFlow_Node);
-		return StandardQueries.getContainingFunctions(events);
+		return CommonQueries.getContainingFunctions(events);
 	}
 	
 	public static Q getIPCGCallGraph(Q eventFunctions, Q selectedAncestors){
@@ -259,7 +257,7 @@ public class IPCG {
 
 		// get the entry function event roots
 		Q eventEdges = ipcg.edges(PCGEdge.EventFlow_Edge);
-		Q entryFunctionEventRoots = eventEdges.successors(masterEntryNodes).intersection(CFG.cfg(ipcgEntryFunctions));
+		Q entryFunctionEventRoots = eventEdges.successors(masterEntryNodes).intersection(CommonQueries.cfg(ipcgEntryFunctions));
 
 		// create new master entry node
 		Node ipcgMasterEntryNode = createInterproceduralMasterEntryNode();
@@ -278,7 +276,7 @@ public class IPCG {
 		
 //		// add edges to master exit from ALL pcg exits
 //		for(Node callGraphFunction : callGraph.eval().nodes()){
-//			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CFG.cfg(callGraphFunction));
+//			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CommonQueries.cfg(callGraphFunction));
 //			for(Node exitEvent : exitEvents.eval().nodes()){
 //				Edge ipcgMasterExitEdge = getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
 //			}
@@ -286,7 +284,7 @@ public class IPCG {
 		
 		// add edges to master exit from leaf function pcg exits
 		for(Node callGraphFunctionLeaf : callGraph.leaves().eval().nodes()){
-			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CFG.cfg(callGraphFunctionLeaf));
+			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(CommonQueries.cfg(callGraphFunctionLeaf));
 			for(Node exitEvent : exitEvents.eval().nodes()){
 				try {
 					getOrCreateIPCGEdge(exitEvent, ipcgMasterExitNode);
@@ -302,7 +300,7 @@ public class IPCG {
 		for(Node callGraphFunctionNonLeaf : callGraph.difference(callGraph.leaves()).eval().nodes()){
 			Q controlFlowConditions = Common.universe().nodes(XCSG.ControlFlowCondition);
 			Q returnStatements = Common.universe().nodes(XCSG.ReturnValue).parent(); // return CF nodes
-			Q potentialEventExits = CFG.cfg(callGraphFunctionNonLeaf).intersection(controlFlowConditions.union(returnStatements));
+			Q potentialEventExits = CommonQueries.cfg(callGraphFunctionNonLeaf).intersection(controlFlowConditions.union(returnStatements));
 			Q exitEvents = eventEdges.predecessors(masterExitNodes).intersection(potentialEventExits);
 			for(Node exitEvent : exitEvents.eval().nodes()){
 				try {

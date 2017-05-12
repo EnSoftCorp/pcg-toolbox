@@ -5,7 +5,7 @@ import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.pcg.common.IPCG;
 
 public class PCGComponents implements Comparable<PCGComponents> {
@@ -92,7 +92,7 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	}
 	
 	public AtlasSet<Node> getContainingFunctions(){
-		Q containingFunctions = StandardQueries.getContainingFunctions(Common.toQ(getControlFlowEvents()));
+		Q containingFunctions = CommonQueries.getContainingFunctions(Common.toQ(getControlFlowEvents()));
 		return containingFunctions.eval().nodes();
 	}
 

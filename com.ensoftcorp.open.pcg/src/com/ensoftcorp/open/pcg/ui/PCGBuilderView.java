@@ -47,7 +47,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.selection.IAtlasSelectionListener;
 import com.ensoftcorp.atlas.ui.selection.SelectionUtil;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
-import com.ensoftcorp.open.commons.analysis.StandardQueries;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.IPCG;
@@ -558,7 +558,7 @@ public class PCGBuilderView extends ViewPart {
 		    });
 
 			Label eventLabel = new Label(ancestorFunctionsComposite, SWT.NONE);
-			eventLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(ancestorFunction) + "\nAddress: " + ancestorFunction.address().toAddressString());
+			eventLabel.setToolTipText(CommonQueries.getQualifiedFunctionName(ancestorFunction) + "\nAddress: " + ancestorFunction.address().toAddressString());
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
@@ -589,9 +589,9 @@ public class PCGBuilderView extends ViewPart {
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
-			Node function = StandardQueries.getContainingFunction(event);
+			Node function = CommonQueries.getContainingFunction(event);
 			eventLabel.setToolTipText(event.getAttr(XCSG.name).toString() 
-					+ " (" + StandardQueries.getQualifiedFunctionName(function) + ")" + "\nAddress: " + event.address().toAddressString());
+					+ " (" + CommonQueries.getQualifiedFunctionName(function) + ")" + "\nAddress: " + event.address().toAddressString());
 			
 			deleteButton.addMouseListener(new MouseAdapter() {
 				@Override
@@ -642,7 +642,7 @@ public class PCGBuilderView extends ViewPart {
 		    });
 
 			Label eventLabel = new Label(expandableFunctionsComposite, SWT.NONE);
-			eventLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(expandableFunction) + "\nAddress: " + expandableFunction.address().toAddressString());
+			eventLabel.setToolTipText(CommonQueries.getQualifiedFunctionName(expandableFunction) + "\nAddress: " + expandableFunction.address().toAddressString());
 			eventLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			eventLabel.setBounds(0, 0, 59, 14);
 			
@@ -676,7 +676,7 @@ public class PCGBuilderView extends ViewPart {
 			deleteButton.setImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg", "icons/delete_button.png"));
 
 			Label functionLabel = new Label(containingFunctionsEntryComposite, SWT.NONE);
-			functionLabel.setToolTipText(StandardQueries.getQualifiedFunctionName(function) + "\nAddress: " + function.address().toAddressString());
+			functionLabel.setToolTipText(CommonQueries.getQualifiedFunctionName(function) + "\nAddress: " + function.address().toAddressString());
 			functionLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 			functionLabel.setBounds(0, 0, 59, 14);
 			functionLabel.setText(function.getAttr(XCSG.name).toString());
@@ -687,7 +687,7 @@ public class PCGBuilderView extends ViewPart {
 					// if there is a containing function there are corresponding events that need to be removed
 					AtlasSet<Node> controlFlowNodesToRemove = new AtlasHashSet<Node>();
 					for(Node controlFlowNode : pcg.getControlFlowEvents()){
-						Node containingFunction = StandardQueries.getContainingFunction(controlFlowNode);
+						Node containingFunction = CommonQueries.getContainingFunction(controlFlowNode);
 						if(function.equals(containingFunction)){
 							controlFlowNodesToRemove.add(controlFlowNode);
 						}
