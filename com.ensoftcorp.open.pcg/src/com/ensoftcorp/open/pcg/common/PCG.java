@@ -48,7 +48,12 @@ public class PCG {
 	@XCSG_Extension
 	public static final String EventFlow_Instance_Parameters_Prefix = "EventFlow_Instance_Parameters_";
 
-	public static final String EventFlow_Instance_SupplementalData_Prefix = "EventFlow_Instance_SupplementalData_";;
+	/**
+	 * An attribute applied to the EventFlow_Master_Entry node that maps to
+	 * the JSON serialized PCG instance supplemental parameters stored for the PCG
+	 */
+	@XCSG_Extension
+	public static final String EventFlow_Instance_SupplementalData_Prefix = "EventFlow_Instance_SupplementalData_";
 	
 	/**
 	 * Defines tags and attributes for PCG nodes
@@ -327,9 +332,9 @@ public class PCG {
 	public void setUpdateLastAccessTime(){
 		JSONObject json = new JSONObject();
 		json.put(PCG.JSON_CREATED, getCreationTime());
-		json.put(PCG.JSON_LAST_ACCESSED, System.nanoTime());
+		json.put(PCG.JSON_LAST_ACCESSED, System.currentTimeMillis());
 		json.put(PCG.JSON_GIVEN_NAME, "");
-		getMasterEntry().putAttr(EventFlow_Instance_Parameters_Prefix + id, json.toJSONString());
+		getMasterEntry().putAttr(EventFlow_Instance_SupplementalData_Prefix + id, json.toJSONString());
 	}
 	
 	/**
@@ -341,7 +346,7 @@ public class PCG {
 		json.put(PCG.JSON_CREATED, getCreationTime());
 		json.put(PCG.JSON_LAST_ACCESSED, getLastAccessTime());
 		json.put(PCG.JSON_GIVEN_NAME, name);
-		getMasterEntry().putAttr(EventFlow_Instance_Parameters_Prefix + id, json.toJSONString());
+		getMasterEntry().putAttr(EventFlow_Instance_SupplementalData_Prefix + id, json.toJSONString());
 	}
 	
 	/**

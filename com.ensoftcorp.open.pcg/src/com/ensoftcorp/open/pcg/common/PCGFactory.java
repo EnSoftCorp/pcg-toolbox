@@ -39,8 +39,6 @@ import com.ensoftcorp.open.pcg.log.Log;
  */
 public class PCGFactory implements UniqueEntryExitGraph {
 	
-	
-	
 	// temporary variables for use in factory construction of a pcg
 	private String pcgInstanceID;
 	private String pcgParameters;
@@ -207,8 +205,10 @@ public class PCGFactory implements UniqueEntryExitGraph {
 					.union(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
 			if(!CommonQueries.isEmpty(pcgInstance)){
 				Node masterEntry = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
-				Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
-				return new PCG(pcgInstanceID, pcgInstance.eval(), function, masterEntry, masterExit);
+				Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Exit).eval().nodes().one();
+				PCG pcg = new PCG(pcgInstanceID, pcgInstance.eval(), function, masterEntry, masterExit);
+				pcg.setUpdateLastAccessTime();
+				return pcg;
 			}
 			
 			// PCG does not exist or could not be found, compute the PCG now
@@ -426,7 +426,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	@SuppressWarnings("unchecked")
 	private String getDefaultSupplementalData() {
 		JSONObject json = new JSONObject();
-		long time = System.nanoTime();
+		long time = System.currentTimeMillis();
 		json.put(PCG.JSON_CREATED, time);
 		json.put(PCG.JSON_LAST_ACCESSED, time);
 		json.put(PCG.JSON_GIVEN_NAME, "");
