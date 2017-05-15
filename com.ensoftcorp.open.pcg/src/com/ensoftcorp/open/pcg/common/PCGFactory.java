@@ -9,7 +9,6 @@ import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
@@ -29,9 +28,8 @@ import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.commons.xcsg.XCSG_Extension;
-import com.ensoftcorp.open.pcg.common.PCGFactory.PCG.PCGEdge;
-import com.ensoftcorp.open.pcg.common.PCGFactory.PCG.PCGNode;
+import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
+import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 import com.ensoftcorp.open.pcg.log.Log;
 
 /**
@@ -41,247 +39,7 @@ import com.ensoftcorp.open.pcg.log.Log;
  */
 public class PCGFactory implements UniqueEntryExitGraph {
 	
-	// constants for serializing pcg parameters
-	private static final String JSON_CFG_NODES = "cfg-nodes";
-	private static final String JSON_CFG_EDGES = "cfg-edges";
-	private static final String JSON_ROOTS = "roots";
-	private static final String JSON_EXITS = "exits";
-	private static final String JSON_EVENTS = "events";
 	
-	public static class PCG {
-		
-		/**
-		 * A tag prefix used to tag the PCG nodes and edges that identify a
-		 * unique PCG instance serialized in the Atlas graph. The tag suffix
-		 * is an MD5 hash of the value of the EventFlow_Instance_Parameters
-		 * attribute.
-		 */
-		@XCSG_Extension
-		public static final String EventFlow_Instance_Prefix = "EventFlow_Instance_";
-		
-		/**
-		 * An attribute applied to the EventFlow_Master_Entry node that maps to
-		 * the JSON serialized PCG instance parameters used to create the pcg
-		 */
-		@XCSG_Extension
-		public static final String EventFlow_Instance_Parameters_Prefix = "EventFlow_Instance_Parameters_";
-		
-		/**
-		 * Defines tags and attributes for PCG nodes
-		 */
-		public static interface PCGNode {
-			/**
-			 * Tag applied to the newly created master entry node
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Master_Entry = "EventFlow_Master_Entry";
-			
-			/**
-			 * Tag applied to the newly create master exit node
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Master_Exit = "EventFlow_Master_Exit";
-			
-			/**
-			 * Tag applied to nodes that are retained in the final PCG
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Node = "EventFlow_Node";
-			
-			/**
-			 * The name attribute applied to the EventFlow_Master_Entry of the PCG
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Master_Entry_Name = "\u22A4";
-			
-			/**
-			 * The name attribute applied to the EventFlow_Master_Exit of the PCG
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Master_Exit_Name = "\u22A5";
-		}
-		
-		/**
-		 * Defines tags and attributes for PCG edges
-		 */
-		public static interface PCGEdge {
-			/**
-			 * Tag applied to CFG edges that are retained in the final PCG
-			 */
-			@XCSG_Extension
-			public static final String EventFlow_Edge = "EventFlow_Edge";
-		}
-		
-		private Graph pcg;
-		private Node masterEntry;
-		private Node masterExit;
-		private String id;
-		
-		private PCG(String id, Graph pcg, Node masterEntry, Node masterExit) {
-			this.id = id;
-			this.pcg = pcg;
-			this.masterEntry = masterEntry;
-			this.masterExit = masterExit;
-		}
-		
-		/**
-		 * Returns the PCG's instance ID. An instance ID is a unique string
-		 * value corresponding to the EventFlow_Instance attribute, which is
-		 * assigned to all of the PCG's nodes and edges. This value can be used
-		 * to recover a serialized PCG from the Atlas graph.
-		 * 
-		 * @return
-		 */
-		public String getInstanceID(){
-			return id;
-		}
-		
-		/**
-		 * Returns the complete PCG (including master entry and exit nodes) as a Q
-		 * @return
-		 */
-		public Q getPCG() {
-			return Common.toQ(pcg);
-		}
-
-		/**
-		 * Returns the original control flow graph used to create this pcg
-		 * @return
-		 */
-		public Q getCFG(){
-			// decode the cfg nodes
-			AtlasSet<Node> cfgNodes = new AtlasHashSet<Node>();
-			try {
-				JSONArray cfgNodeAddresses = (JSONArray) getParameters().get(JSON_CFG_NODES);
-				for(Object address : cfgNodeAddresses){
-					Node cfgNode = (Node) getGraphElementByAddress(address.toString());
-					cfgNodes.add(cfgNode);
-				}
-			} catch (Throwable t){
-				String message = "Could not decode serialized PCG " + JSON_CFG_NODES + " parameters.";
-				RuntimeException e = new RuntimeException(message, t);
-				throw e;
-			}
-			
-			// decode the cfg edges
-			AtlasSet<Edge> cfgEdges = new AtlasHashSet<Edge>();
-			try {
-				JSONArray cfgEdgeAddresses = (JSONArray) getParameters().get(JSON_CFG_EDGES);
-				for(Object address : cfgEdgeAddresses){
-					Edge cfgEdge = (Edge) getGraphElementByAddress(address.toString());
-					cfgEdges.add(cfgEdge);
-				}
-			} catch (Throwable t){
-				String message = "Could not decode serialized PCG " + JSON_CFG_EDGES + " parameters.";
-				RuntimeException e = new RuntimeException(message, t);
-				throw e;
-			}
-			
-			return Common.toQ(new UncheckedGraph(cfgNodes, cfgEdges));
-		}
-		
-		/**
-		 * Returns the selected control flow events used to create this pcg
-		 * @return
-		 */
-		public Q getEvents(){
-			AtlasSet<Node> events = new AtlasHashSet<Node>();
-			try {
-				JSONArray eventAddresses = (JSONArray) getParameters().get(JSON_EVENTS);
-				for(Object address : eventAddresses){
-					Node event = (Node) getGraphElementByAddress(address.toString());
-					events.add(event);
-				}
-			} catch (Throwable t){
-				String message = "Could not decode serialized PCG " + JSON_EVENTS + " parameters.";
-				RuntimeException e = new RuntimeException(message, t);
-				throw e;
-			}
-			return Common.toQ(events);
-		}
-		
-		/**
-		 * Returns the selected control flow roots used to create this pcg
-		 * @return
-		 */
-		public Q getRoots(){
-			AtlasSet<Node> roots = new AtlasHashSet<Node>();
-			try {
-				JSONArray rootAddresses = (JSONArray) getParameters().get(JSON_ROOTS);
-				for(Object address : rootAddresses){
-					Node root = (Node) getGraphElementByAddress(address.toString());
-					roots.add(root);
-				}
-			} catch (Throwable t){
-				String message = "Could not decode serialized PCG " + JSON_ROOTS + " parameters.";
-				RuntimeException e = new RuntimeException(message, t);
-				throw e;
-			}
-			return Common.toQ(roots);
-		}
-		
-		/**
-		 * Returns the selected control flow exits used to create this pcg
-		 * @return
-		 */
-		public Q getExits(){
-			AtlasSet<Node> exits = new AtlasHashSet<Node>();
-			try {
-				JSONArray exitAddresses = (JSONArray) getParameters().get(JSON_EXITS);
-				for(Object address : exitAddresses){
-					Node exit = (Node) getGraphElementByAddress(address.toString());
-					exits.add(exit);
-				}
-			} catch (Throwable t){
-				String message = "Could not decode serialized PCG " + JSON_EXITS + " parameters.";
-				RuntimeException e = new RuntimeException(message, t);
-				throw e;
-			}
-			return Common.toQ(exits);
-		}
-		
-		/**
-		 * Returns the PCG's master entry node
-		 * @return
-		 */
-		public Node getMasterEntry() {
-			return masterEntry;
-		}
-
-		/**
-		 * Returns the PCG's master exit node
-		 * @return
-		 */
-		public Node getMasterExit() {
-			return masterExit;
-		}
-		
-		/**
-		 * Helper method to select the Atlas graph element given a serialized graph element address
-		 * @param address
-		 * @return
-		 */
-		private GraphElement getGraphElementByAddress(String address){
-			int hexAddress = Integer.parseInt(address, 16);
-			GraphElement ge = Graph.U.getAt(hexAddress);
-			return ge;
-		}
-		
-		/**
-		 * Helper method to get the serialized PCG parameters for this pcg instance
-		 * @return
-		 */
-		private JSONObject getParameters(){
-			try {
-				JSONParser parser = new JSONParser();
-				String jsonString = getMasterEntry().getAttr(EventFlow_Instance_Parameters_Prefix + id).toString();
-				JSONObject json = (JSONObject) parser.parse(jsonString);
-				return json;
-			} catch (Exception e){
-				throw new RuntimeException("Could not decode serialized PCG parameters.", e);
-			}
-		}
-	}
 	
 	// temporary variables for use in factory construction of a pcg
 	private String pcgInstanceID;
@@ -443,7 +201,6 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			cfRoots = cfRoots.intersection(cfg);
 			cfExits = cfExits.intersection(cfg);
 			
-			
 			String pcgParameters = getPCGParametersJSONString(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), events.eval().nodes());
 			String pcgInstanceID = md5(pcgParameters);
 			Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
@@ -451,7 +208,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			if(!CommonQueries.isEmpty(pcgInstance)){
 				Node masterEntry = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
 				Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
-				return new PCG(pcgInstanceID, pcgInstance.eval(), masterEntry, masterExit);
+				return new PCG(pcgInstanceID, pcgInstance.eval(), function, masterEntry, masterExit);
 			}
 			
 			// PCG does not exist or could not be found, compute the PCG now
@@ -461,6 +218,9 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	
 	@SuppressWarnings("unchecked")
 	private static String getPCGParametersJSONString(Graph cfg, AtlasSet<Node> cfRoots, AtlasSet<Node> cfExits, AtlasSet<Node> events){
+		// important note: do not modify this json list without special consideration
+		// the result of this json object is used to compute the hash instance id of the PCG
+		// only values that constitute pcg equivalences should be used to create this object
 		events = Common.toQ(events).intersection(Common.toQ(cfg)).eval().nodes();
 		cfRoots = Common.toQ(cfRoots).intersection(Common.toQ(cfg)).eval().nodes();
 		cfExits = Common.toQ(cfExits).intersection(Common.toQ(cfg)).eval().nodes();
@@ -491,11 +251,11 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 		
 		JSONObject json = new JSONObject();
-		json.put(JSON_CFG_NODES, cfgNodeAddresses);
-		json.put(JSON_CFG_EDGES, cfgEdgeAddresses);
-		json.put(JSON_ROOTS, rootAddresses);
-		json.put(JSON_EXITS, exitAddresses);
-		json.put(JSON_EVENTS, eventAddresses);
+		json.put(PCG.JSON_CFG_NODES, cfgNodeAddresses);
+		json.put(PCG.JSON_CFG_EDGES, cfgEdgeAddresses);
+		json.put(PCG.JSON_ROOTS, rootAddresses);
+		json.put(PCG.JSON_EXITS, exitAddresses);
+		json.put(PCG.JSON_EVENTS, eventAddresses);
 		
 		return json.toJSONString();
 	}
@@ -651,11 +411,28 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		
 		// attribute the master entry node with the pcg instance parameters
 		this.masterEntry.putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
+		this.masterEntry.putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
 		
 		// construct the pcg object
-		return new PCG(pcgInstanceID, new UncheckedGraph(pcgNodeSet, pcgEdgeSet), getEntryNode(), getExitNode());	
+		return new PCG(pcgInstanceID, new UncheckedGraph(pcgNodeSet, pcgEdgeSet), function, getEntryNode(), getExitNode());	
 	}
 	
+	/**
+	 * Returns a JSON object string of default supplemental values for a PCG instance,
+	 * this list may optionally be extended to store additional details for PCGs without
+	 * affecting the core PCG implementation
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private String getDefaultSupplementalData() {
+		JSONObject json = new JSONObject();
+		long time = System.nanoTime();
+		json.put(PCG.JSON_CREATED, time);
+		json.put(PCG.JSON_LAST_ACCESSED, time);
+		json.put(PCG.JSON_GIVEN_NAME, "");
+		return json.toJSONString();
+	}
+
 	/**
 	 * Consumes the given non-event node bypassing it through connecting its
 	 * predecessors with successors while preserving edges contents especially
