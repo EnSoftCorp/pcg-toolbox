@@ -4,23 +4,28 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.part.ViewPart;
 
 import com.ensoftcorp.atlas.core.markup.Markup;
@@ -29,9 +34,6 @@ import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
-import org.eclipse.swt.events.FocusAdapter;
-import org.eclipse.swt.events.FocusEvent;
-import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 
 public class PCGLogView extends ViewPart {
@@ -43,7 +45,7 @@ public class PCGLogView extends ViewPart {
 	
 	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("hh:mm:ss MM-dd-yyyy");
 	
-	private ArrayList<PCG> pcgs = new ArrayList<PCG>();
+	private static final String PCG_DATA = "pcg_data";
 	
 	private Table table;
 	private Button showButton;
@@ -51,7 +53,7 @@ public class PCGLogView extends ViewPart {
 	
 	// default sort descending by last accessed time
 	private boolean sortAscending = false;
-	private Comparator<PCG> tableSorter = new LastAccessedComparator();
+	private Comparator<PCG> tableSorter = new CreationComparator();
 	
 	private static class LastAccessedComparator implements Comparator<PCG> {
 		@Override
@@ -175,9 +177,8 @@ public class PCGLogView extends ViewPart {
 			// remove all rows
 			table.removeAll();
 			
-			Set<PCG> instances = PCG.getInstances();
-			pcgs = new ArrayList<PCG>(instances);
-			
+			// get and sort the pcg instances by the currently selected table sorter
+			ArrayList<PCG> pcgs = new ArrayList<PCG>(PCG.getInstances());
 			if(sortAscending){
 				pcgs.sort(tableSorter);
 			} else {
@@ -186,7 +187,7 @@ public class PCGLogView extends ViewPart {
 
 	        for (PCG pcg : pcgs) {
 	        	TableItem item = new TableItem(table, SWT.NONE);
-	        	item.setData("pcg", pcg);
+	        	item.setData(PCG_DATA, pcg);
 	        	
 	        	// set given name
 	        	try {
@@ -238,52 +239,61 @@ public class PCGLogView extends ViewPart {
 		parent.setLayout(new GridLayout(1, false));
 		
 		Group tableSelectionControlsGroup = new Group(parent, SWT.NONE);
-		tableSelectionControlsGroup.setLayout(new GridLayout(2, false));
+		tableSelectionControlsGroup.setLayout(new GridLayout(3, false));
 		tableSelectionControlsGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		tableSelectionControlsGroup.setText("Table Selection Controls");
+		tableSelectionControlsGroup.setText("Table Controls");
+		
+		Button refreshButton = new Button(tableSelectionControlsGroup, SWT.NONE);
+		refreshButton.setText("Refresh");
+		refreshButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					updateTable();
+				} catch (Exception ex){
+					DisplayUtils.showError(ex, "Error refreshing table.");
+				}
+			}
+		});
 		
 		showButton = new Button(tableSelectionControlsGroup, SWT.NONE);
 		showButton.setText("Show");
-		
+		showButton.setEnabled(false);
 		showButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				try {
 					if(table.getSelectionCount() == 1){
 						TableItem selection = table.getSelection()[0];
-						PCG pcg = (PCG) selection.getData("pcg");
-						String givenName = pcg.getGivenName();
-						String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
-						Markup markup = new Markup();
-						markup.setNode(pcg.getEvents(), MarkupProperty.NODE_BACKGROUND_COLOR, java.awt.Color.CYAN);
-						HighlighterUtils.applyHighlightsForCFEdges(markup);
-						pcg.setUpdateLastAccessTime();
-						DisplayUtils.show(pcg.getPCG(), markup, true, title);
+						PCG pcg = (PCG) selection.getData(PCG_DATA);
+						showPCG(pcg);
+						updateTable();
 					} else {
 						DisplayUtils.showError("Please make a selection in the table.");
 					}
 				} catch (Exception ex){
-					DisplayUtils.showError(ex, "Error loading PCG");
+					DisplayUtils.showError(ex, "Error loading PCG.");
 				}
 			}
 		});
-		showButton.setEnabled(false);
 		
 		deleteButton = new Button(tableSelectionControlsGroup, SWT.NONE);
 		deleteButton.setText("Delete");
-		
+		deleteButton.setEnabled(false);
 		deleteButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				try {
-					DisplayUtils.showMessage("Not Implemented");
+					TableItem selection = table.getSelection()[0];
+					PCG pcg = (PCG) selection.getData(PCG_DATA);
+					PCG.deleteInstance(pcg.getInstanceID());
+					updateTable();
 				} catch (Exception ex){
-					DisplayUtils.showError(ex, "Error loading PCG");
+					DisplayUtils.showError(ex, "Error deleting PCG.");
 				}
 			}
 		});
-		deleteButton.setEnabled(false);
-
+		
 		table = new Table(parent, SWT.BORDER | SWT.FULL_SELECTION);
 		table.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 		table.setHeaderVisible(true);
@@ -376,6 +386,94 @@ public class PCGLogView extends ViewPart {
 				deleteButton.setEnabled(true);
 			}
 		});
+        
+        final TableEditor editor = new TableEditor(table);
+		editor.horizontalAlignment = SWT.LEFT;
+		editor.grabHorizontal = true;
+		table.addListener(SWT.MouseDoubleClick, new Listener() {
+			public void handleEvent(Event event) {
+				Rectangle clientArea = table.getClientArea();
+				Point pt = new Point(event.x, event.y);
+				int row = table.getTopIndex();
+				while (row < table.getItemCount()) {
+					boolean visible = false;
+					final TableItem item = table.getItem(row);
+					for (int i = 0; i < table.getColumnCount(); i++) {
+						final int column = i; 
+						// given name is in first column
+						Rectangle rect = item.getBounds(column);
+						if (rect.contains(pt)) {
+							if(column == 0){
+								final Text text = new Text(table, SWT.NONE);
+								Listener textListener = new Listener() {
+									public void handleEvent(final Event e) {
+										switch (e.type) {
+										case SWT.FocusOut:
+											item.setText(column, text.getText());
+											text.dispose();
+											break;
+										case SWT.Traverse:
+											switch (e.detail) {
+											case SWT.TRAVERSE_RETURN:
+												String givenName = text.getText();
+												item.setText(column, givenName);
+												try {
+													PCG pcg = (PCG) item.getData(PCG_DATA);
+													pcg.setGivenName(givenName);
+													// don't need to update the table, it would look the same here
+												} catch (Exception ex){
+													DisplayUtils.showError(ex, "Error setting given name.");
+												}
+												// fall through
+											case SWT.TRAVERSE_ESCAPE:
+												text.dispose();
+												e.doit = false;
+											}
+											break;
+										}
+									}
+								};
+								text.addListener(SWT.FocusOut, textListener);
+								text.addListener(SWT.Traverse, textListener);
+								editor.setEditor(text, item, column);
+								text.setText(item.getText(column));
+								text.selectAll();
+								text.setFocus();
+								return;
+							} else {
+								// double click was on a different column
+								// just show the PCG
+								try {
+									PCG pcg = (PCG) item.getData(PCG_DATA);
+									showPCG(pcg);
+									updateTable();
+								} catch (Exception ex){
+									DisplayUtils.showError(ex, "Could not load PCG.");
+								}
+								return;
+							}
+						}
+						if (!visible && rect.intersects(clientArea)) {
+							visible = true;
+						}
+					}
+					if (!visible){
+						return;
+					}
+					row++;
+				}
+			}
+		});
+	}
+	
+	private static void showPCG(PCG pcg) {
+		String givenName = pcg.getGivenName();
+		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
+		Markup markup = new Markup();
+		markup.setNode(pcg.getEvents(), MarkupProperty.NODE_BACKGROUND_COLOR, java.awt.Color.CYAN);
+		HighlighterUtils.applyHighlightsForCFEdges(markup);
+		pcg.setUpdateLastAccessTime();
+		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}
 	
 	private static void resizeTable(Table table) {

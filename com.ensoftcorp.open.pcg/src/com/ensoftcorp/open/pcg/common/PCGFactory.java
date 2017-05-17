@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -28,6 +29,7 @@ import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
+import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 import com.ensoftcorp.open.pcg.log.Log;
@@ -43,6 +45,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	private String pcgInstanceID;
 	private String pcgParameters;
 	private Node function;
+	private Graph cfg;
 	private AtlasSet<Node> events;
 	private AtlasSet<Node> pcgNodes;
 	private AtlasSet<Edge> pcgEdges;
@@ -132,11 +135,10 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		this.pcgInstanceID = pcgInstanceID;
 		this.pcgParameters = pcgParameters;
 		this.function = function;
-		this.events = events;
-		this.pcgNodes = new AtlasHashSet<Node>();
-		this.nodes().addAll(cfg.nodes());
-		this.pcgEdges = new AtlasHashSet<Edge>();
-		this.edges().addAll(cfg.edges());
+		this.events = new AtlasHashSet<Node>(events);
+		this.cfg = cfg;
+		this.pcgNodes = new AtlasHashSet<Node>(cfg.nodes());
+		this.pcgEdges = new AtlasHashSet<Edge>(cfg.edges());
 		this.masterEntry = setupMasterEntryNode(roots);
 		this.masterExit = setupMasterExitNode(exits);
 	}
@@ -179,9 +181,10 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @param function
 	 * @param events
 	 * @return PCG
-	 * @throws NoSuchAlgorithmException  
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
+		cfg = cfg.intersection(Common.index()); // TODO: remove
+		
 		AtlasSet<Node> functions = CommonQueries.getContainingFunctions(cfg).eval().nodes();
 		if(functions.isEmpty()){
 			String message = "CFG is empty or is not contained within a function!";
@@ -199,10 +202,14 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			cfRoots = cfRoots.intersection(cfg);
 			cfExits = cfExits.intersection(cfg);
 			
+			Log.info("Nodes: " + cfg.eval().nodes().size() + ", Edges: " + cfg.eval().edges().size());
+			
 			String pcgParameters = getPCGParametersJSONString(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), events.eval().nodes());
+			Log.info("Creating PCG: " + pcgParameters);
+			
 			String pcgInstanceID = md5(pcgParameters);
 			Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
-					.union(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
+					.induce(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
 			if(!CommonQueries.isEmpty(pcgInstance)){
 				Node masterEntry = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
 				Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Exit).eval().nodes().one();
@@ -369,15 +376,13 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @return
 	 */
 	public PCG createPCG(){
-		this.events = this.getImpliedEvents();
-		for(Node node : this.events){
-			node.tag(PCGNode.EventFlow_Node);
-		}
+		AtlasSet<Node> allEvents = new AtlasHashSet<Node>(events);
+		allEvents.addAll(getImpliedEvents());
 
 		// retain a stack of node that are consumed to be removed from the graph after the loop
 		AtlasSet<Node> nodesToRemove = new AtlasHashSet<Node>();
 		for(Node node : this.nodes()){
-			if(!this.events.contains(node)){
+			if(!allEvents.contains(node)){
 				this.consumeNode(node);
 				nodesToRemove.add(node);
 			}
@@ -401,20 +406,22 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			}
 		}
 		
+		Graph pcg = Common.resolve(new NullProgressMonitor(), new UncheckedGraph(pcgNodeSet, pcgEdgeSet));
+		
 		// tag the pcg with the instance id
-		for(Node pcgNode : pcgNodeSet){
+		for(Node pcgNode : pcg.nodes()){
 			pcgNode.tag(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
 		}
-		for(Edge pcgEdge : pcgEdgeSet){
+		for(Edge pcgEdge : pcg.edges()){
 			pcgEdge.tag(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
 		}
 		
-		// attribute the master entry node with the pcg instance parameters
+		// attribute the master entry node with the pcg instance parameters and default supplemental data
 		this.masterEntry.putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
 		this.masterEntry.putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
 		
 		// construct the pcg object
-		return new PCG(pcgInstanceID, new UncheckedGraph(pcgNodeSet, pcgEdgeSet), function, getEntryNode(), getExitNode());	
+		return new PCG(pcgInstanceID, pcg, function, getEntryNode(), getExitNode());	
 	}
 	
 	/**
@@ -524,18 +531,17 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	/**
 	 * Performs dominance analysis on graph to compute the dominance frontier for every node in the graph.
 	 * Then, compute the final set of nodes that will be retained in the final PCG
-	 * @return The set of all nodes that need to be retained in the final PCG
+	 * @return The set of implied nodes that need to be retained in the final PCG
 	 */
 	private AtlasSet<Node> getImpliedEvents() {
 		DominanceAnalysis dominanceAnalysis = new DominanceAnalysis(this, true);
 		Multimap<Node> dominanceFrontier = dominanceAnalysis.getDominanceFrontiers();
 
-		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>(this.events);
-		AtlasSet<Node> newEvents = null;
+		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>();
 		long preSize = 0;
 		do {
 			preSize = impliedEvents.size();
-			newEvents = new AtlasHashSet<Node>();
+			AtlasSet<Node> newEvents = new AtlasHashSet<Node>();
 			for (Node element : impliedEvents) {
 				newEvents.addAll(dominanceFrontier.get(element));
 			}
@@ -561,7 +567,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		Q fromQ = Common.toQ(from);
 		Q toQ = Common.toQ(to);
 		AtlasSet<Edge> betweenEdges = new AtlasHashSet<Edge>();
-		AtlasSet<Edge> cfgEdges = Common.universe().edges(XCSG.ControlFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
+		AtlasSet<Edge> cfgEdges = Common.toQ(cfg).betweenStep(fromQ, toQ).eval().edges();
 		if (attrs.containsKey(XCSG.conditionValue)) {
 			betweenEdges = cfgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
 		} else {
@@ -577,13 +583,13 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			return edge;
 		}
 
-		// second - Check if there exist PCG edge: use it
-		AtlasSet<Edge> PCGEdges = Common.universe().edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
+		// second - check if there exist PCG edge: use it
+		AtlasSet<Edge> pcgEdges = Common.toQ(cfg).edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
 		betweenEdges = new AtlasHashSet<Edge>();
 		if (attrs.containsKey(XCSG.conditionValue)) {
-			betweenEdges = PCGEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
+			betweenEdges = pcgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
 		} else {
-			for (Edge edge : PCGEdges) {
+			for (Edge edge : pcgEdges) {
 				if (!edge.hasAttr(XCSG.conditionValue)) {
 					betweenEdges.add(edge);
 				}
@@ -593,7 +599,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			return betweenEdges.one();
 		}
 
-		// finally - Create a new edge
+		// finally - create a new edge
 		Edge newEdge = Graph.U.createEdge(from, to);
 		newEdge.putAllAttr(attrs);
 		if (tags != null) {

@@ -71,11 +71,11 @@ public class PCG {
 		@XCSG_Extension
 		public static final String EventFlow_Master_Exit = "EventFlow_Master_Exit";
 		
-		/**
-		 * Tag applied to nodes that are retained in the final PCG
-		 */
-		@XCSG_Extension
-		public static final String EventFlow_Node = "EventFlow_Node";
+//		/**
+//		 * Tag applied to nodes that are retained in the final PCG
+//		 */
+//		@XCSG_Extension
+//		public static final String EventFlow_Node = "EventFlow_Node";
 		
 		/**
 		 * The name attribute applied to the EventFlow_Master_Entry of the PCG
@@ -101,6 +101,10 @@ public class PCG {
 		public static final String EventFlow_Edge = "EventFlow_Edge";
 	}
 	
+	/**
+	 * Returns a set of all PCG instances
+	 * @return
+	 */
 	public static Set<PCG> getInstances(){
 		AtlasSet<Node> pcgMasterEntries = Common.universe().nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes();
 		Set<PCG> pcgs = new HashSet<PCG>();
@@ -115,7 +119,12 @@ public class PCG {
 		return pcgs;
 	}
 	
-	private static PCG getInstance(String pcgInstanceID) {
+	/**
+	 * Returns the PCG instance corresponding to the given PCG instance id
+	 * @param pcgInstanceID
+	 * @return
+	 */
+	public static PCG getInstance(String pcgInstanceID) {
 		Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
 				.union(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
 		if(!CommonQueries.isEmpty(pcgInstance)){
@@ -125,6 +134,80 @@ public class PCG {
 			return new PCG(pcgInstanceID, pcgInstance.eval(), function, masterEntry, masterExit);
 		} else {
 			throw new IllegalArgumentException("PCG instance " + pcgInstanceID + " does not exist.");
+		}
+	}
+	
+	/**
+	 * Deletes all PCG instances 
+	 * @param pcgInstanceID
+	 */
+	public static void deleteInstances(){
+		AtlasSet<Node> pcgMasterEntries = Common.universe().nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes();
+		Set<String> instances = new HashSet<String>();
+		for(Node pcgMasterEntry : pcgMasterEntries){
+			for(String attributeKey : pcgMasterEntry.attr().keys()){
+				if(attributeKey.startsWith(PCG.EventFlow_Instance_Parameters_Prefix)){
+					String instanceID = attributeKey.substring(PCG.EventFlow_Instance_Parameters_Prefix.length());
+					instances.add(instanceID);
+				}
+			}
+		}
+		for(String instance : instances){
+			deleteInstance(instance);
+		}
+	}
+	
+	/**
+	 * Deletes a PCG instance corresponding to the given PCG instance id 
+	 * @param pcgInstanceID
+	 */
+	public static void deleteInstance(String pcgInstanceID){
+		Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
+				.induce(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
+		if(!CommonQueries.isEmpty(pcgInstance)){
+			Graph pcg = pcgInstance.eval();
+			AtlasSet<Edge> edges = new AtlasHashSet<Edge>(pcg.edges());
+			AtlasSet<Edge> edgesToRemove = new AtlasHashSet<Edge>();
+			AtlasSet<Node> nodes = new AtlasHashSet<Node>(pcg.nodes());
+			AtlasSet<Node> nodesToRemove = new AtlasHashSet<Node>();
+			for(Edge edge : edges){
+				edge.tags().remove(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
+				if(!edge.taggedWith(XCSG.ControlFlow_Edge)){
+					boolean hasAnotherInstance = false;
+					for(String tag : edge.tags()){
+						if(tag.startsWith(PCG.EventFlow_Instance_Prefix)){
+							hasAnotherInstance = true;
+							break;
+						}
+					}
+					if(!hasAnotherInstance){
+						edgesToRemove.add(edge);
+					}
+				}
+			}
+			for(Edge edge : edgesToRemove){
+				Graph.U.delete(edge);
+			}
+			for(Node node : nodes){
+				node.tags().remove(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
+				node.tags().remove(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID);
+				node.tags().remove(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID);
+				if(node.taggedWith(PCG.PCGNode.EventFlow_Master_Entry) || node.taggedWith(PCG.PCGNode.EventFlow_Master_Exit)){
+					boolean hasAnotherInstance = false;
+					for(String tag : node.tags()){
+						if(tag.startsWith(PCG.EventFlow_Instance_Prefix)){
+							hasAnotherInstance = true;
+							break;
+						}
+					}
+					if(!hasAnotherInstance){
+						nodesToRemove.add(node);
+					}
+				}
+			}
+			for(Node node : nodesToRemove){
+				Graph.U.delete(node);
+			}
 		}
 	}
 
@@ -333,7 +416,7 @@ public class PCG {
 		JSONObject json = new JSONObject();
 		json.put(PCG.JSON_CREATED, getCreationTime());
 		json.put(PCG.JSON_LAST_ACCESSED, System.currentTimeMillis());
-		json.put(PCG.JSON_GIVEN_NAME, "");
+		json.put(PCG.JSON_GIVEN_NAME, getGivenName());
 		getMasterEntry().putAttr(EventFlow_Instance_SupplementalData_Prefix + id, json.toJSONString());
 	}
 	
