@@ -71,11 +71,11 @@ public class PCG {
 		@XCSG_Extension
 		public static final String EventFlow_Master_Exit = "EventFlow_Master_Exit";
 		
-//		/**
-//		 * Tag applied to nodes that are retained in the final PCG
-//		 */
-//		@XCSG_Extension
-//		public static final String EventFlow_Node = "EventFlow_Node";
+		/**
+		 * Tag applied to nodes that are retained in the final PCG
+		 */
+		@XCSG_Extension
+		public static final String EventFlow_Node = "EventFlow_Node";
 		
 		/**
 		 * The name attribute applied to the EventFlow_Master_Entry of the PCG

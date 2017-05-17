@@ -183,8 +183,6 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
-		cfg = cfg.intersection(Common.index()); // TODO: remove
-		
 		AtlasSet<Node> functions = CommonQueries.getContainingFunctions(cfg).eval().nodes();
 		if(functions.isEmpty()){
 			String message = "CFG is empty or is not contained within a function!";
@@ -481,7 +479,8 @@ public class PCGFactory implements UniqueEntryExitGraph {
 				this.edges().add(newEdge);
 			}
 			
-			// duplicate edges maybe be formed at the predecessor because of consuming the current node, so merge if needed
+			// duplicate edges maybe be formed at the predecessor because of
+			// consuming the current node, so merge if needed
 			this.removeDoubleEdges(predecessor);
 		}
 		
@@ -537,7 +536,8 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		DominanceAnalysis dominanceAnalysis = new DominanceAnalysis(this, true);
 		Multimap<Node> dominanceFrontier = dominanceAnalysis.getDominanceFrontiers();
 
-		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>();
+		// start with the set of explict events to determine the implied events
+		AtlasHashSet<Node> impliedEvents = new AtlasHashSet<Node>(events);
 		long preSize = 0;
 		do {
 			preSize = impliedEvents.size();
@@ -551,6 +551,12 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		// add entry and exit nodes as event nodes as well
 		impliedEvents.add(this.getEntryNode());
 		impliedEvents.add(this.getExitNode());
+		
+		// remove the explicit events
+		for(Node event : events){
+			impliedEvents.remove(event);
+		}
+		
 		return impliedEvents;
 	}
 	
@@ -584,7 +590,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 
 		// second - check if there exist PCG edge: use it
-		AtlasSet<Edge> pcgEdges = Common.toQ(cfg).edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
+		AtlasSet<Edge> pcgEdges = Common.universe().edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
 		betweenEdges = new AtlasHashSet<Edge>();
 		if (attrs.containsKey(XCSG.conditionValue)) {
 			betweenEdges = pcgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
