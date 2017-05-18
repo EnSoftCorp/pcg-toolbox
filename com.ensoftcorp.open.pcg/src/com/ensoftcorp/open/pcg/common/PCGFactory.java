@@ -27,6 +27,7 @@ import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis.Multimap;
+import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitControlFlowGraph;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
@@ -39,80 +40,18 @@ import com.ensoftcorp.open.pcg.log.Log;
  * 
  * @author Ahmed Tamrawi, Ben Holland, Ganesh Ram Santhanam, Jon Mathews, Nikhil Ranade
  */
-public class PCGFactory implements UniqueEntryExitGraph {
+public class PCGFactory {
 	
 	// temporary variables for use in factory construction of a pcg
+	private UniqueEntryExitControlFlowGraph ucfg;
+	private AtlasSet<Node> roots;
+	private AtlasSet<Node> exits;
+	private AtlasSet<Node> events;
+	private AtlasSet<Node> nodes;
+	private AtlasSet<Edge> edges;
+	
 	private String pcgInstanceID;
 	private String pcgParameters;
-	private Node function;
-	private Graph cfg;
-	private AtlasSet<Node> events;
-	private AtlasSet<Node> pcgNodes;
-	private AtlasSet<Edge> pcgEdges;
-	private Node masterEntry;
-	private Node masterExit;
-	
-	/**
-	 * The set of nodes associated with the PCG
-	 * @return the set of nodes
-	 */
-	@Override
-	public AtlasSet<Node> nodes() {
-		return this.pcgNodes;
-	}
-
-	/**
-	 * The set of edges associated with the PCG
-	 * @return the set of edges
-	 */
-	@Override
-	public AtlasSet<Edge> edges() {
-		return this.pcgEdges;
-	}
-	
-	/**
-	 * Gets the predecessors of a given node
-	 * @param node
-	 * @return Predecessors of node
-	 */
-	@Override
-	public AtlasSet<Node> getPredecessors(Node node){
-		AtlasSet<Node> predecessors = new AtlasHashSet<Node>();
-		for(Edge edge : this.edges()){
-			if(edge.getNode(EdgeDirection.TO).equals(node)){
-				Node parent = edge.getNode(EdgeDirection.FROM);
-				predecessors.add(parent);
-			}
-		}
-		return predecessors;
-	}
-	
-	/**
-	 * Gets the successors of a given node 
-	 * @param node
-	 * @return Successors of node
-	 */
-	@Override
-	public AtlasSet<Node> getSuccessors(Node node){		
-		AtlasSet<Node> successors = new AtlasHashSet<Node>();
-		for(Edge edge : this.edges()){
-			if(edge.getNode(EdgeDirection.FROM).equals(node)){
-				Node child = edge.getNode(EdgeDirection.TO);
-				successors.add(child);
-			}
-		}
-		return successors;
-	}
-
-	@Override
-	public Node getEntryNode() {
-		return this.masterEntry;
-	}
-
-	@Override
-	public Node getExitNode() {
-		return this.masterExit;
-	}
 	
 	/** 
 	 * 
@@ -131,16 +70,14 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @param exits
 	 * @param events
 	 */
-	private PCGFactory(String pcgInstanceID, String pcgParameters, Node function, Graph cfg, AtlasSet<Node> roots, AtlasSet<Node> exits, AtlasSet<Node> events) {
+	private PCGFactory(String pcgInstanceID, String pcgParameters, Graph cfg, AtlasSet<Node> roots, AtlasSet<Node> exits, AtlasSet<Node> events) {
 		this.pcgInstanceID = pcgInstanceID;
 		this.pcgParameters = pcgParameters;
-		this.function = function;
+		
+		this.ucfg = new UniqueEntryExitControlFlowGraph(cfg, roots, exits);
 		this.events = new AtlasHashSet<Node>(events);
-		this.cfg = cfg;
-		this.pcgNodes = new AtlasHashSet<Node>(cfg.nodes());
-		this.pcgEdges = new AtlasHashSet<Edge>(cfg.edges());
-		this.masterEntry = setupMasterEntryNode(roots);
-		this.masterExit = setupMasterExitNode(exits);
+		this.nodes = new AtlasHashSet<Node>(ucfg.getGraph().nodes());
+		this.edges = new AtlasHashSet<Edge>(ucfg.getGraph().edges());
 	}
 
 	/**
@@ -207,7 +144,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			
 			String pcgInstanceID = md5(pcgParameters);
 			Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
-					.induce(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
+					.induce(Common.universe().edgesTaggedWithAll(PCG.EventFlow_Instance_Prefix + pcgInstanceID, PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID).retainEdges());
 			if(!CommonQueries.isEmpty(pcgInstance)){
 				Node masterEntry = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
 				Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Exit).eval().nodes().one();
@@ -217,7 +154,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			}
 			
 			// PCG does not exist or could not be found, compute the PCG now
-			return new PCGFactory(pcgInstanceID, pcgParameters, function, cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), events.eval().nodes()).createPCG();
+			return new PCGFactory(pcgInstanceID, pcgParameters, cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), events.eval().nodes()).createPCG();
 		}
 	}
 	
@@ -301,110 +238,40 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	}
 	
 	/**
-	 * Creates the nodes and edges for setting up the master entry node
-	 * @param roots nodes to consider as control flow roots (entry points) in the graph
-	 */
-	private Node setupMasterEntryNode(AtlasSet<Node> roots){
-		// search if the function has a master entry node for any previously
-		// created PCG
-		// note we are reusing master entry nodes so the search should be from
-		// the entire function cfg not just the specified roots
-		Node masterEntryNode = Common.universe().edgesTaggedWithAll(PCGEdge.EventFlow_Edge)
-				.predecessors(CommonQueries.cfg(function))
-				.nodes(PCG.PCGNode.EventFlow_Master_Entry)
-				.eval().nodes().one();
-		
-		// if master entry node has not been created by a previous pcg, then we
-		// need to create one now
-		if (masterEntryNode == null) {
-			masterEntryNode = Graph.U.createNode();
-			masterEntryNode.attr().put(XCSG.name, PCGNode.EventFlow_Master_Entry_Name);
-			masterEntryNode.tag(PCGNode.EventFlow_Master_Entry);
-		}
-		
-		// add the master entry node to the pcg
-		this.nodes().add(masterEntryNode);
-		
-		// create pcg entry edges from the master entry to the pcg root nodes
-		// and check if the entry edges exist before creating new ones
-		for(Node root : roots){
-			Edge entryEdge = this.getOrCreatePCGEdge(masterEntryNode, root, new NotificationHashMap<String, Object>(), null);
-			this.edges().add(entryEdge);
-		}
-		return masterEntryNode;
-	}
-	
-	/**
-	 * Creates the nodes and edges for setting up the master exit node
-	 * @param exits nodes to consider as control flow exits (exit points) in the graph
-	 * @return
-	 */
-	private Node setupMasterExitNode(AtlasSet<Node> exits) {
-		// search if the function has a master exit node for any previously
-		// created PCG
-		// note we are reusing master exit nodes so the search should be from
-		// the entire function cfg not just the specified exits
-		Node masterExitNode = Common.universe().edgesTaggedWithAll(PCGEdge.EventFlow_Edge)
-				.successors(CommonQueries.cfg(function))
-				.nodes(PCG.PCGNode.EventFlow_Master_Exit)
-				.eval().nodes().one();
-		
-		// if master exit node has not been created by a previous pcg, then we
-		// need to create one now
-		if (masterExitNode == null) {
-			masterExitNode = Graph.U.createNode();
-			masterExitNode.attr().put(XCSG.name, PCGNode.EventFlow_Master_Exit_Name);
-			masterExitNode.tag(PCGNode.EventFlow_Master_Exit);
-		}
-		
-		// add the master exit node to the pcg
-		this.nodes().add(masterExitNode);
-
-		// create pcg exit edges from the pcg exits to the master exit node
-		// and check if the exit edges exist before creating new ones
-		for (Node exit : exits) {
-			Edge exitEdge = this.getOrCreatePCGEdge(exit, masterExitNode, new NotificationHashMap<String, Object>(), null);
-			this.edges().add(exitEdge);
-		}
-		return masterExitNode;
-	}
-	
-	/**
 	 * Given a CFG, construct PCG
 	 * @return
 	 */
 	public PCG createPCG(){
-		AtlasSet<Node> allEvents = new AtlasHashSet<Node>(events);
-		allEvents.addAll(getImpliedEvents());
+		AtlasSet<Node> impliedEvents = getImpliedEvents();
 
 		// retain a stack of node that are consumed to be removed from the graph after the loop
 		AtlasSet<Node> nodesToRemove = new AtlasHashSet<Node>();
-		for(Node node : this.nodes()){
-			if(!allEvents.contains(node)){
-				this.consumeNode(node);
+		for(Node node : nodes){
+			if(!impliedEvents.contains(node)){
+				consumeNode(node);
 				nodesToRemove.add(node);
 			}
 		}
 		
 		// remove the consumed nodes in the previous loop
 		for(Node node : nodesToRemove){
-			this.nodes().remove(node);
+			nodes.remove(node);
 		}
 		
-		// create a copy of all the nodes
-		AtlasSet<Node> pcgNodeSet = new AtlasHashSet<Node>(this.nodes());
-
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
-		AtlasSet<Edge> pcgEdgeSet = new AtlasHashSet<Edge>();
-		for (Edge edge : this.edges()) {
-			if (pcgNodeSet.contains(edge.getNode(EdgeDirection.FROM)) && pcgNodeSet.contains(edge.getNode(EdgeDirection.TO)) ) {
-				pcgEdgeSet.add(edge);
-			} else {
-				Log.error("Internal error in PCG: edge not connected to pcg node: " + edge, new RuntimeException("Disconnected PCG Node"));
+		AtlasSet<Edge> edgesToRemove = new AtlasHashSet<Edge>();
+		for (Edge edge : edges) {
+			if (!nodes.contains(edge.getNode(EdgeDirection.FROM)) && nodes.contains(edge.getNode(EdgeDirection.TO)) ) {
+				edgesToRemove.add(edge);
 			}
 		}
 		
-		Graph pcg = Common.resolve(new NullProgressMonitor(), new UncheckedGraph(pcgNodeSet, pcgEdgeSet));
+		// remove the disconnected edges in the previous loop
+		for(Edge edge : edgesToRemove){
+			this.edges.remove(edge);
+		}
+		
+		Graph pcg = Common.resolve(new NullProgressMonitor(), Common.toQ(new UncheckedGraph(nodes, edges)).retainEdges().eval());
 		
 		// tag the pcg with the instance id
 		for(Node pcgNode : pcg.nodes()){
@@ -415,11 +282,11 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 		
 		// attribute the master entry node with the pcg instance parameters and default supplemental data
-		this.masterEntry.putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
-		this.masterEntry.putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
+		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
+		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
 		
 		// construct the pcg object
-		return new PCG(pcgInstanceID, pcg, function, getEntryNode(), getExitNode());	
+		return new PCG(pcgInstanceID, pcg, ucfg.getFunction(), ucfg.getEntryNode(), ucfg.getExitNode());
 	}
 	
 	/**
@@ -451,7 +318,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		// contents especially for branches.
 		
 		// first: get the predecessors for the node
-		AtlasSet<Edge> inEdges = this.getInEdgesToNode(node);
+		AtlasSet<Edge> inEdges = getInEdgesToNode(node);
 		HashMap<Node, Edge> predecessorEdgeMap = new HashMap<Node, Edge>(); 
 		for(Edge inEdge : inEdges){
 			Node predecessor = inEdge.getNode(EdgeDirection.FROM);
@@ -461,7 +328,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		predecessorEdgeMap.keySet().remove(node);
 		
 		// second: get the successors for the node
-		AtlasSet<Edge> outEdges = this.getOutEdgesFromNode(node);
+		AtlasSet<Edge> outEdges = getOutEdgesFromNode(node);
 		AtlasSet<Node> successors = new AtlasHashSet<Node>();
 		for(Edge outEdge : outEdges){
 			Node successor = outEdge.getNode(EdgeDirection.TO);
@@ -473,10 +340,8 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		for(Node predecessor : predecessorEdgeMap.keySet()){
 			for(Node successor : successors){
 				Edge oldEdge = predecessorEdgeMap.get(predecessor);
-				NotificationMap<String, Object> attrs = new NotificationHashMap<String, Object>();
-				attrs.putAll(oldEdge.attr());
-				Edge newEdge = this.getOrCreatePCGEdge(predecessor, successor, attrs, oldEdge.tags());
-				this.edges().add(newEdge);
+				Edge newEdge = this.getOrCreatePCGEdge(predecessor, successor, oldEdge.attr(), oldEdge.tags());
+				edges.add(newEdge);
 			}
 			
 			// duplicate edges maybe be formed at the predecessor because of
@@ -486,12 +351,12 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		
 		// remove original inEdges for the node
 		for(Edge inEdge : inEdges){
-			this.edges().remove(inEdge);
+			edges.remove(inEdge);
 		}
 		
 		// remove original outEdges for the node
 		for(Edge outEdge : outEdges){
-			this.edges().remove(outEdge);
+			edges.remove(outEdge);
 		}
 	}
 	
@@ -512,28 +377,28 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 		
 		for(Node successor : nodeEdgeMap.keySet()){
-			AtlasSet<Edge> edges = nodeEdgeMap.get(successor);
-			if(edges.size() > 1){
-				Edge oldEdge = edges.one();
+			AtlasSet<Edge> successorEdges = nodeEdgeMap.get(successor);
+			if(successorEdges.size() > 1){
+				Edge oldEdge = successorEdges.one();
 				NotificationMap<String, Object> attrs = new NotificationHashMap<String, Object>();
 				attrs.putAll(oldEdge.attr());
 				attrs.remove(XCSG.conditionValue);
 				Edge newEdge = this.getOrCreatePCGEdge(node, successor, attrs, oldEdge.tags());
-				for(Edge edge : edges){
-					this.edges().remove(edge);
+				for(Edge successorEdge : successorEdges){
+					edges.remove(successorEdge);
 				}
-				this.edges().add(newEdge);
+				edges.add(newEdge);
 			}
 		}
 	}
 	
 	/**
 	 * Performs dominance analysis on graph to compute the dominance frontier for every node in the graph.
-	 * Then, compute the final set of nodes that will be retained in the final PCG
+	 * Then, compute the final set of nodes that will be retained in the final sPCG
 	 * @return The set of implied nodes that need to be retained in the final PCG
 	 */
 	private AtlasSet<Node> getImpliedEvents() {
-		DominanceAnalysis dominanceAnalysis = new DominanceAnalysis(this, true);
+		DominanceAnalysis dominanceAnalysis = new DominanceAnalysis(ucfg, true);
 		Multimap<Node> dominanceFrontier = dominanceAnalysis.getDominanceFrontiers();
 
 		// start with the set of explict events to determine the implied events
@@ -549,13 +414,8 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		} while (preSize != impliedEvents.size());
 
 		// add entry and exit nodes as event nodes as well
-		impliedEvents.add(this.getEntryNode());
-		impliedEvents.add(this.getExitNode());
-		
-		// remove the explicit events
-		for(Node event : events){
-			impliedEvents.remove(event);
-		}
+		impliedEvents.add(ucfg.getEntryNode());
+		impliedEvents.add(ucfg.getExitNode());
 		
 		return impliedEvents;
 	}
@@ -569,11 +429,11 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @return the existent PCG edge or newly created PCG edge
 	 */
 	private Edge getOrCreatePCGEdge(Node from, Node to, NotificationMap<String, Object> attrs, NotificationSet<String> tags) {
-		// first - Check if there exist CFG edge: tag it with EventFlow_Edge
+		// first - Check if there is an existing CFG edge, if there is tag it as an event flow edge
 		Q fromQ = Common.toQ(from);
 		Q toQ = Common.toQ(to);
 		AtlasSet<Edge> betweenEdges = new AtlasHashSet<Edge>();
-		AtlasSet<Edge> cfgEdges = Common.toQ(cfg).betweenStep(fromQ, toQ).eval().edges();
+		AtlasSet<Edge> cfgEdges = Common.toQ(ucfg.getCFG()).betweenStep(fromQ, toQ).eval().edges();
 		if (attrs.containsKey(XCSG.conditionValue)) {
 			betweenEdges = cfgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
 		} else {
@@ -585,12 +445,13 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 		if (!betweenEdges.isEmpty()) {
 			Edge edge = betweenEdges.one();
-			tagPCGEdge(edge, false);
+			edge.tag(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID);
 			return edge;
 		}
 
-		// second - check if there exist PCG edge: use it
-		AtlasSet<Edge> pcgEdges = Common.universe().edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
+		// second - check if there exists an EventFlow edge (for this instance), if there is use it
+		// the edge to ignore removes previous edges so this is looks like a first run computation
+		AtlasSet<Edge> pcgEdges = Common.universe().edges(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID).betweenStep(fromQ, toQ).eval().edges();
 		betweenEdges = new AtlasHashSet<Edge>();
 		if (attrs.containsKey(XCSG.conditionValue)) {
 			betweenEdges = pcgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
@@ -605,31 +466,24 @@ public class PCGFactory implements UniqueEntryExitGraph {
 			return betweenEdges.one();
 		}
 
-		// finally - create a new edge
+		// finally - create a new edge and use it
 		Edge newEdge = Graph.U.createEdge(from, to);
 		newEdge.putAllAttr(attrs);
 		if (tags != null) {
 			for (String tag : tags) {
-				newEdge.tag(tag);
+				if(!tag.startsWith(PCGEdge.EventFlow_Edge_Instance_Prefix)){
+					newEdge.tag(tag);
+				}
 			}
 		}
-		tagPCGEdge(newEdge, true);
+		newEdge.tag(XCSG.Edge);
+		newEdge.tag(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID);
+		newEdge.untag(XCSG.ControlFlow_Edge);
+		newEdge.untag(XCSG.ExceptionalControlFlow_Edge);
+		
+		Log.info("Created New Edge: " + newEdge.address().toAddressString() + ", Tags: " + newEdge.tags().toString());
+		
 		return newEdge;
-	}
-	
-	/**
-	 * Tags the given edges with PCGEdge.EventFlow_Edge
-	 * If newEdge is true, this function untags XCSG.ControlFlow_Edge and XCSG.ExceptionalControlFlow_Edge from the passed edge
-	 * @param edge: edge to tag with PCGEdge.EventFlow_Edge
-	 * @param newEdge: specifies whether the passed edge is newly created. If so: untags XCSG.ControlFlow_Edge and XCSG.ExceptionalControlFlow_Edge from edge
-	 */
-	private void tagPCGEdge(Edge edge, boolean newEdge){
-		edge.tag(PCGEdge.EventFlow_Edge);
-		edge.tag(XCSG.Edge);
-		if(newEdge){
-			edge.untag(XCSG.ControlFlow_Edge);
-			edge.untag(XCSG.ExceptionalControlFlow_Edge);
-		}
 	}
 	
 	/**
@@ -639,7 +493,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 */
 	private AtlasSet<Edge> getInEdgesToNode(Node node){
 		AtlasSet<Edge> inEdges = new AtlasHashSet<Edge>();
-		for(Edge edge : this.edges()){
+		for(Edge edge : edges){
 			if(edge.getNode(EdgeDirection.TO).equals(node)){
 				inEdges.add(edge);
 			}
@@ -654,7 +508,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 */
 	private AtlasSet<Edge> getOutEdgesFromNode(Node node){
 		AtlasSet<Edge> outEdges = new AtlasHashSet<Edge>();
-		for(Edge edge : this.edges()){
+		for(Edge edge : edges){
 			if(edge.getNode(EdgeDirection.FROM).equals(node)){
 				outEdges.add(edge);
 			}

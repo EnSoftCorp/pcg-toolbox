@@ -19,6 +19,7 @@ import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.xcsg.XCSG_Extension;
+import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 
 public class PCG {
 
@@ -72,12 +73,6 @@ public class PCG {
 		public static final String EventFlow_Master_Exit = "EventFlow_Master_Exit";
 		
 		/**
-		 * Tag applied to nodes that are retained in the final PCG
-		 */
-		@XCSG_Extension
-		public static final String EventFlow_Node = "EventFlow_Node";
-		
-		/**
 		 * The name attribute applied to the EventFlow_Master_Entry of the PCG
 		 */
 		@XCSG_Extension
@@ -98,6 +93,8 @@ public class PCG {
 		 * Tag applied to CFG edges that are retained in the final PCG
 		 */
 		@XCSG_Extension
+		public static final String EventFlow_Edge_Instance_Prefix = "EventFlow_Edge_Instance_";
+		
 		public static final String EventFlow_Edge = "EventFlow_Edge";
 	}
 	
@@ -163,7 +160,7 @@ public class PCG {
 	 */
 	public static void deleteInstance(String pcgInstanceID){
 		Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
-				.induce(Common.universe().edges(PCG.EventFlow_Instance_Prefix + pcgInstanceID).retainEdges());
+				.induce(Common.universe().edgesTaggedWithAll(PCG.EventFlow_Instance_Prefix + pcgInstanceID, PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID).retainEdges());
 		if(!CommonQueries.isEmpty(pcgInstance)){
 			Graph pcg = pcgInstance.eval();
 			AtlasSet<Edge> edges = new AtlasHashSet<Edge>(pcg.edges());
