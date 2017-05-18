@@ -144,8 +144,9 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	}
 
 	/**
-	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
-	 * @param function
+	 * Construct the PCGs corresponding to the given events
+	 * <p>
+	 * Does NOT include exceptional control flow edges, i.e. equivalent to #create(events, false).
 	 * @param events
 	 * @return PCG
 	 */
@@ -154,10 +155,10 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	}
 	
 	/**
-	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
-	 * Considers exceptional control flow paths if specified
-	 * @param function
+	 * Construct the PCGs corresponding to the given events.
+	 * 
 	 * @param events
+	 * @param exceptionalControlFlow if true include exceptional control flow edges
 	 * @return PCG
 	 */
 	public static PCG create(Q events, boolean exceptionalControlFlow) {
@@ -168,7 +169,6 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		} else {
 			cfg = CommonQueries.cfg(functions);
 		}
-		events = events.intersection(cfg);
 		return create(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events);
 	}
 	
@@ -182,6 +182,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @param events
 	 * @return PCG
 	 */
+	// The CFG is expected to be for a single Function
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
 		AtlasSet<Node> functions = CommonQueries.getContainingFunctions(cfg).eval().nodes();
 		if(functions.isEmpty()){
