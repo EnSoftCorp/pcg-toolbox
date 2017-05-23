@@ -2,15 +2,10 @@ package com.ensoftcorp.open.pcg.common;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
 
-import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
-import com.ensoftcorp.atlas.core.db.notification.NotificationHashMap;
-import com.ensoftcorp.atlas.core.db.notification.NotificationMap;
-import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
@@ -25,7 +20,6 @@ import com.ensoftcorp.open.commons.sandbox.SandboxGraph;
 import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
-import com.ensoftcorp.open.pcg.log.Log;
 
 /**
  * A class that implements the event flow graph transformations to transform a given CFG into PCG
@@ -271,8 +265,10 @@ public class PCGFactory {
 //		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
 //		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
 		
+		SandboxGraph pcg = sandbox.toGraph(nodes, edges);
+
 		// construct the pcg object
-		return new PCG(null);
+		return new PCG(sandbox.flush(pcg));
 	}
 	
 //	/**
@@ -304,7 +300,7 @@ public class PCGFactory {
 		// conditional values
 		
 		// first: get the predecessors for the node
-		SandboxHashSet<SandboxEdge> inEdges = getInEdgesToNode(node);
+		SandboxHashSet<SandboxEdge> inEdges = this.getInEdgesToNode(node);
 		HashMap<SandboxNode, SandboxEdge> predecessorEdgeMap = new HashMap<SandboxNode, SandboxEdge>(); 
 		for(SandboxEdge inEdge : inEdges){
 			SandboxNode predecessor = inEdge.getNode(EdgeDirection.FROM);
@@ -314,7 +310,7 @@ public class PCGFactory {
 		predecessorEdgeMap.keySet().remove(node);
 		
 		// second: get the successors for the node
-		SandboxHashSet<SandboxEdge> outEdges = getOutEdgesFromNode(node);
+		SandboxHashSet<SandboxEdge> outEdges = this.getOutEdgesFromNode(node);
 		SandboxHashSet<SandboxNode> successors = sandbox.emptyNodeSet();
 		for(SandboxEdge outEdge : outEdges){
 			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
@@ -453,8 +449,6 @@ public class PCGFactory {
 		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
 		pcgEdge.tag(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID);
-		
-		Log.info("Created New Edge: " + pcgEdge.getAddress() + ", Tags: " + pcgEdge.tags().toString());
 		
 		return pcgEdge;
 	}
