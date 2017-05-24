@@ -329,7 +329,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		// create pcg entry edges from the master entry to the pcg root nodes
 		// and check if the entry edges exist before creating new ones
 		for(Node root : roots){
-			Edge entryEdge = this.getOrCreatePCGEdge(masterEntryNode, root, new NotificationHashMap<String, Object>(), null);
+			Edge entryEdge = this.getOrCreatePCGEdge(masterEntryNode, root, false, null);
 			this.edges().add(entryEdge);
 		}
 		return masterEntryNode;
@@ -364,7 +364,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		// create pcg exit edges from the pcg exits to the master exit node
 		// and check if the exit edges exist before creating new ones
 		for (Node exit : exits) {
-			Edge exitEdge = this.getOrCreatePCGEdge(exit, masterExitNode, new NotificationHashMap<String, Object>(), null);
+			Edge exitEdge = this.getOrCreatePCGEdge(exit, masterExitNode, false, null);
 			this.edges().add(exitEdge);
 		}
 		return masterExitNode;
@@ -476,7 +476,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 				Edge oldEdge = predecessorEdgeMap.get(predecessor);
 				NotificationMap<String, Object> attrs = new NotificationHashMap<String, Object>();
 				attrs.putAll(oldEdge.attr());
-				Edge newEdge = this.getOrCreatePCGEdge(predecessor, successor, attrs, oldEdge.tags());
+				Edge newEdge = this.getOrCreatePCGEdge(predecessor, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
 				this.edges().add(newEdge);
 			}
 			
@@ -519,7 +519,7 @@ public class PCGFactory implements UniqueEntryExitGraph {
 				NotificationMap<String, Object> attrs = new NotificationHashMap<String, Object>();
 				attrs.putAll(oldEdge.attr());
 				attrs.remove(XCSG.conditionValue);
-				Edge newEdge = this.getOrCreatePCGEdge(node, successor, attrs, oldEdge.tags());
+				Edge newEdge = this.getOrCreatePCGEdge(node, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
 				for(Edge edge : edges){
 					this.edges().remove(edge);
 				}
@@ -569,14 +569,14 @@ public class PCGFactory implements UniqueEntryExitGraph {
 	 * @param tags: the set of <String> tags that needs to be applied to the newly created edge
 	 * @return the existent PCG edge or newly created PCG edge
 	 */
-	private Edge getOrCreatePCGEdge(Node from, Node to, NotificationMap<String, Object> attrs, NotificationSet<String> tags) {
+	private Edge getOrCreatePCGEdge(Node from, Node to, boolean filterConditions, Object conditionValue) {
 		// first - Check if there exist CFG edge: tag it with EventFlow_Edge
 		Q fromQ = Common.toQ(from);
 		Q toQ = Common.toQ(to);
 		AtlasSet<Edge> betweenEdges = new AtlasHashSet<Edge>();
 		AtlasSet<Edge> cfgEdges = Common.toQ(cfg).betweenStep(fromQ, toQ).eval().edges();
-		if (attrs.containsKey(XCSG.conditionValue)) {
-			betweenEdges = cfgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
+		if (filterConditions) {
+			betweenEdges = cfgEdges.filter(XCSG.conditionValue, conditionValue);
 		} else {
 			for (Edge edge : cfgEdges) {
 				if (!edge.hasAttr(XCSG.conditionValue)) {
@@ -586,15 +586,16 @@ public class PCGFactory implements UniqueEntryExitGraph {
 		}
 		if (!betweenEdges.isEmpty()) {
 			Edge edge = betweenEdges.one();
-			tagPCGEdge(edge, false);
+			edge.tag(PCGEdge.EventFlow_Edge);
+			edge.tag(XCSG.Edge);
 			return edge;
 		}
 
 		// second - check if there exist PCG edge: use it
 		AtlasSet<Edge> pcgEdges = Common.universe().edges(PCGEdge.EventFlow_Edge).betweenStep(fromQ, toQ).eval().edges();
 		betweenEdges = new AtlasHashSet<Edge>();
-		if (attrs.containsKey(XCSG.conditionValue)) {
-			betweenEdges = pcgEdges.filter(XCSG.conditionValue, attrs.get(XCSG.conditionValue));
+		if (filterConditions) {
+			betweenEdges = pcgEdges.filter(XCSG.conditionValue, conditionValue);
 		} else {
 			for (Edge edge : pcgEdges) {
 				if (!edge.hasAttr(XCSG.conditionValue)) {
@@ -608,29 +609,10 @@ public class PCGFactory implements UniqueEntryExitGraph {
 
 		// finally - create a new edge
 		Edge newEdge = Graph.U.createEdge(from, to);
-		newEdge.putAllAttr(attrs);
-		if (tags != null) {
-			for (String tag : tags) {
-				newEdge.tag(tag);
-			}
-		}
-		tagPCGEdge(newEdge, true);
+		newEdge.putAttr(XCSG.conditionValue, conditionValue);
+		newEdge.tag(PCGEdge.EventFlow_Edge);
+		newEdge.tag(XCSG.Edge);
 		return newEdge;
-	}
-	
-	/**
-	 * Tags the given edges with PCGEdge.EventFlow_Edge
-	 * If newEdge is true, this function untags XCSG.ControlFlow_Edge and XCSG.ExceptionalControlFlow_Edge from the passed edge
-	 * @param edge: edge to tag with PCGEdge.EventFlow_Edge
-	 * @param newEdge: specifies whether the passed edge is newly created. If so: untags XCSG.ControlFlow_Edge and XCSG.ExceptionalControlFlow_Edge from edge
-	 */
-	private void tagPCGEdge(Edge edge, boolean newEdge){
-		edge.tag(PCGEdge.EventFlow_Edge);
-		edge.tag(XCSG.Edge);
-		if(newEdge){
-			edge.untag(XCSG.ControlFlow_Edge);
-			edge.untag(XCSG.ExceptionalControlFlow_Edge);
-		}
 	}
 	
 	/**
