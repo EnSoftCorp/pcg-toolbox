@@ -277,6 +277,15 @@ public class PCG {
 		}
 		pcg.getMasterEntry().putAttr(EventFlow_Instances, updatedInstances.toJSONString());
 	}
+	
+	/**
+	 * Purges all records of PCGs from the Atlas graph
+	 */
+	public static void deleteAll(){
+		for(Node masterEntry : new AtlasHashSet<Node>(Common.universe().nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes())){
+			masterEntry.attr().remove(EventFlow_Instances);
+		}
+	}
 
 	private static PCG decodePCGInstance(JSONObject pcgInstance) {		
 		// decode the pcg nodes
