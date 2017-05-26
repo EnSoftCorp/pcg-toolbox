@@ -23,7 +23,6 @@ public class HighlighterUtils {
 	public static final Color cfgTrue = java.awt.Color.WHITE;
 	public static final Color cfgFalse = java.awt.Color.BLACK;
 	public static final Color cfgExceptional = java.awt.Color.BLUE;
-	public static final Color cfgBack = java.awt.Color.GRAY;
 
 	/**
 	 * GRAY  = ControlFlowBackEdge

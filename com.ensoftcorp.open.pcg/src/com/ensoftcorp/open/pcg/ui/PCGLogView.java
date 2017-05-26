@@ -4,9 +4,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.TableEditor;
@@ -34,7 +31,6 @@ import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
-import org.eclipse.swt.widgets.Label;
 
 public class PCGLogView extends ViewPart {
 
@@ -178,7 +174,7 @@ public class PCGLogView extends ViewPart {
 			table.removeAll();
 			
 			// get and sort the pcg instances by the currently selected table sorter
-			ArrayList<PCG> pcgs = new ArrayList<PCG>(PCG.getInstances());
+			ArrayList<PCG> pcgs = new ArrayList<PCG>(PCG.loadAll());
 			if(sortAscending){
 				pcgs.sort(tableSorter);
 			} else {
@@ -286,7 +282,7 @@ public class PCGLogView extends ViewPart {
 				try {
 					TableItem selection = table.getSelection()[0];
 					PCG pcg = (PCG) selection.getData(PCG_DATA);
-					PCG.deleteInstance(pcg.getInstanceID());
+					PCG.delete(pcg);
 					updateTable();
 				} catch (Exception ex){
 					DisplayUtils.showError(ex, "Error deleting PCG.");
@@ -468,11 +464,14 @@ public class PCGLogView extends ViewPart {
 	
 	private static void showPCG(PCG pcg) {
 		String givenName = pcg.getGivenName();
+		if(givenName == null){
+			givenName = "";
+		}
 		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
 		Markup markup = new Markup();
 		markup.setNode(pcg.getEvents(), MarkupProperty.NODE_BACKGROUND_COLOR, java.awt.Color.CYAN);
 		HighlighterUtils.applyHighlightsForCFEdges(markup);
-		pcg.setUpdateLastAccessTime();
+		pcg.updateLastAccessTime();
 		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}
 	

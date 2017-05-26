@@ -2,8 +2,12 @@ package com.ensoftcorp.open.pcg.common;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
+import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
@@ -14,9 +18,11 @@ import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.preferences.CommonsPreferences;
+import com.ensoftcorp.open.commons.sandbox.DefaultFlushProvider;
 import com.ensoftcorp.open.commons.sandbox.Sandbox;
 import com.ensoftcorp.open.commons.sandbox.SandboxEdge;
 import com.ensoftcorp.open.commons.sandbox.SandboxGraph;
+import com.ensoftcorp.open.commons.sandbox.SandboxGraphElement;
 import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
@@ -28,46 +34,6 @@ import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
  */
 public class PCGFactory {
 	
-	// temporary variables for use in factory construction of a pcg
-	private Sandbox sandbox;
-	private SandboxGraph ucfg;
-	private SandboxGraph dominanceFrontier;
-	private SandboxNode masterEntry;
-	private SandboxNode masterExit;
-	private SandboxHashSet<SandboxNode> events;
-	private SandboxHashSet<SandboxNode> nodes;
-	private SandboxHashSet<SandboxEdge> edges;
-	private final String pcgInstanceID = "TODO";
-	
-	/**
-	 * Constructs a PCG
-	 * @param ucfg
-	 * @param events
-	 */
-	private PCGFactory(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> events) {
-		Graph dominanceFrontier;
-		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() || CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()){
-			// use the pre-compute relationships if they are available
-			dominanceFrontier = DominanceAnalysis.getDominanceFrontiers().retainEdges().eval();
-		} else {
-			dominanceFrontier = Common.toQ(DominanceAnalysis.computeDominanceFrontier(ucfg)).retainEdges().eval();
-		}
-		
-		// initialize the sandbox universe
-		this.sandbox = new Sandbox();
-		this.sandbox.addGraph(dominanceFrontier);
-		this.sandbox.addGraph(ucfg.getGraph());
-		
-		// save the sandbox nodes, edges, and events to iterate over
-		this.ucfg = sandbox.graph(ucfg.getGraph());
-		this.masterEntry = (SandboxNode) sandbox.getAt(ucfg.getEntryNode().address().toAddressString());
-		this.masterExit = (SandboxNode) sandbox.getAt(ucfg.getExitNode().address().toAddressString());
-		this.dominanceFrontier = sandbox.graph(dominanceFrontier);
-		this.nodes = sandbox.nodes(ucfg.getGraph().nodes());
-		this.edges = sandbox.edges(ucfg.getGraph().edges());
-		this.events = sandbox.nodes(events);
-	}
-
 	/**
 	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
 	 * @param function
@@ -122,100 +88,159 @@ public class PCGFactory {
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
-		
-//		String pcgInstanceID = md5(pcgParameters);
-//		Q pcgInstance = Common.universe().nodes(PCG.EventFlow_Instance_Prefix + pcgInstanceID)
-//				.induce(Common.universe().edgesTaggedWithAll(PCG.EventFlow_Instance_Prefix + pcgInstanceID, PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID).retainEdges());
-//		if(!CommonQueries.isEmpty(pcgInstance)){
-//			Node masterEntry = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes().one();
-//			Node masterExit = pcgInstance.nodes(PCG.PCGNode.EventFlow_Master_Exit).eval().nodes().one();
-//			PCG pcg = new PCG(pcgInstanceID, pcgInstance.eval(), function, masterEntry, masterExit);
-//			pcg.setUpdateLastAccessTime();
-//			return pcg;
-//		}
-		
-		// PCG does not exist or could not be found, compute the PCG now
-		return new PCGFactory(ucfg, events.eval().nodes()).createPCG();
+		PCG pcg = PCG.load(ucfg, events.eval().nodes());
+		if(pcg != null){
+			return pcg;
+		} else {
+			// PCG does not exist or could not be found, compute the PCG now
+			return new PCGFactory(ucfg, events.eval().nodes()).createPCG();
+		}
 	}
 	
-//	@SuppressWarnings("unchecked")
-//	private static String getPCGParametersJSONString(Graph cfg, AtlasSet<Node> cfRoots, AtlasSet<Node> cfExits, AtlasSet<Node> events){
-//		// important note: do not modify this json list without special consideration
-//		// the result of this json object is used to compute the hash instance id of the PCG
-//		// only values that constitute pcg equivalences should be used to create this object
-//		events = Common.toQ(events).intersection(Common.toQ(cfg)).eval().nodes();
-//		cfRoots = Common.toQ(cfRoots).intersection(Common.toQ(cfg)).eval().nodes();
-//		cfExits = Common.toQ(cfExits).intersection(Common.toQ(cfg)).eval().nodes();
-//		
-//		JSONArray cfgNodeAddresses = new JSONArray();
-//		for(String address : getSortedAddressList(cfg.nodes())){
-//			cfgNodeAddresses.add(address);
-//		}
-//		
-//		JSONArray cfgEdgeAddresses = new JSONArray();
-//		for(String address : getSortedAddressList(cfg.edges())){
-//			cfgEdgeAddresses.add(address);
-//		}
-//		
-//		JSONArray rootAddresses = new JSONArray();
-//		for(String address : getSortedAddressList(cfRoots)){
-//			rootAddresses.add(address);
-//		}
-//		
-//		JSONArray exitAddresses = new JSONArray();
-//		for(String address : getSortedAddressList(cfExits)){
-//			exitAddresses.add(address);
-//		}
-//		
-//		JSONArray eventAddresses = new JSONArray();
-//		for(String address : getSortedAddressList(events)){
-//			eventAddresses.add(address);
-//		}
-//		
-//		JSONObject json = new JSONObject();
-//		json.put(PCG.JSON_CFG_NODES, cfgNodeAddresses);
-//		json.put(PCG.JSON_CFG_EDGES, cfgEdgeAddresses);
-//		json.put(PCG.JSON_ROOTS, rootAddresses);
-//		json.put(PCG.JSON_EXITS, exitAddresses);
-//		json.put(PCG.JSON_EVENTS, eventAddresses);
-//		
-//		return json.toJSONString();
-//	}
-//	
-//	/**
-//	 * Computes the MD5 hash of a string value
-//	 * @param value
-//	 * @return
-//	 * @throws NoSuchAlgorithmException
-//	 */
-//	private static String md5(String value) {
-//		try {
-//			MessageDigest md = MessageDigest.getInstance("MD5");
-//			byte[] array = md.digest(value.getBytes());
-//			StringBuffer sb = new StringBuffer();
-//			for (int i = 0; i < array.length; ++i) {
-//				sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
-//			}
-//			return sb.toString().toUpperCase();
-//		} catch (NoSuchAlgorithmException e) {
-//			Log.error("MD5 hashing is not supported!", e);
-//			throw new RuntimeException(e);
-//		}
-//	}
-//	
-//	/**
-//	 * Returns an alphabetically sorted list of graph element addresses
-//	 * @param graphElements
-//	 * @return
-//	 */
-//	private static List<String> getSortedAddressList(AtlasSet<? extends GraphElement> graphElements){
-//		ArrayList<String> addresses = new ArrayList<String>((int) graphElements.size());
-//		for(GraphElement graphElement : graphElements){
-//			addresses.add(graphElement.address().toAddressString());
-//		}
-//		Collections.sort(addresses);
-//		return addresses;
-//	}
+	// temporary variables for use in factory construction of a pcg
+	private Sandbox sandbox;
+	private SandboxGraph ucfg;
+	private SandboxGraph dominanceFrontier;
+	private SandboxNode masterEntry;
+	private SandboxNode masterExit;
+	private SandboxHashSet<SandboxNode> events;
+	private SandboxHashSet<SandboxNode> nodes;
+	private SandboxHashSet<SandboxEdge> edges;
+	
+	private UniqueEntryExitControlFlowGraph atlasUCFG;
+	private AtlasSet<Node> atlasEvents;
+	
+	private static class PCGFlushProvider extends DefaultFlushProvider {
+		/**
+		 * Flushes the changes made or creation of a sandbox graph element to
+		 * the Atlas graph and updates the address map accordingly.
+		 * 
+		 * This implementation differes from the default implementation by
+		 * attempting to re-use EventFlow edges that already exist between the
+		 * two given nodes if the sandbox created a new edge between the two
+		 * edges.
+		 * 
+		 * @param ge
+		 * @return
+		 */
+		@Override
+		public GraphElement flush(SandboxGraphElement ge, Map<String,SandboxGraphElement> addresses) {
+			if(ge.isMirror()){
+				if(ge instanceof SandboxNode){
+					Node node = Graph.U.createNode();
+					// add all the sandbox tags
+					for(String tag : ge.tags()){
+						node.tag(tag);
+					}
+					// add all new sandbox attributes
+					for(String key : ge.attr().keySet()){
+						node.putAttr(key, ge.attr().get(key));
+					}
+					addresses.remove(ge.getAddress());
+					ge.flush(node.address().toAddressString());
+					addresses.put(ge.getAddress(), ge);
+					return node;
+				} else if(ge instanceof SandboxEdge){
+					SandboxEdge sandboxEdge = (SandboxEdge) ge;
+					// assert: nodes will all have been flushed by the time we are flushing edges
+					Node from = CommonQueries.getNodeByAddress(sandboxEdge.from().getAddress());
+					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
+					
+					Edge edge;
+					if(sandboxEdge.tags().contains(PCG.PCGEdge.EventFlow_Edge)){
+						// only create event flow edges between nodes if one does not already exist
+						AtlasSet<Edge> betweenEdges = Common.universe().betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
+						if(!betweenEdges.isEmpty()){
+							edge = betweenEdges.one();
+						} else {
+							edge = Graph.U.createEdge(from, to);
+						}
+					} else {
+						edge = Graph.U.createEdge(from, to);
+					}
+					
+					// add all the sandbox tags
+					for(String tag : ge.tags()){
+						edge.tag(tag);
+					}
+					// add all new sandbox attributes
+					for(String key : ge.attr().keySet()){
+						edge.putAttr(key, ge.attr().get(key));
+					}
+					addresses.remove(ge.getAddress());
+					ge.flush(edge.address().toAddressString());
+					addresses.put(ge.getAddress(), ge);
+					return edge;
+				} else {
+					throw new RuntimeException("Unknown sandbox graph element type.");
+				}
+			} else {
+				GraphElement age = CommonQueries.getGraphElementByAddress(ge.getAddress());
+				
+				// purge all old tags
+				Set<String> tagsToRemove = new HashSet<String>();
+				for(String tag : age.tags()){
+					tagsToRemove.add(tag);
+				}
+				for(String tag : tagsToRemove){
+					age.tags().remove(tag);
+				}
+				
+				// add all the sandbox tags
+				for(String tag : ge.tags()){
+					age.tag(tag);
+				}
+				
+				// purge all old attributes
+				Set<String> keysToRemove = new HashSet<String>();
+				for(String key : age.attr().keys()){
+					keysToRemove.add(key);
+				}
+				for(String key : keysToRemove){
+					age.attr().remove(key);
+				}
+				
+				// add all new sandbox attributes
+				for(String key : ge.attr().keySet()){
+					age.putAttr(key, ge.attr().get(key));
+				}
+				
+				return age;
+			}
+		}
+	}
+	
+	/**
+	 * Constructs a PCG
+	 * @param ucfg
+	 * @param events
+	 */
+	private PCGFactory(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> events) {
+		this.atlasUCFG = ucfg;
+		this.atlasEvents = events;
+		Graph dominanceFrontier;
+		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() || CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()){
+			// use the pre-compute relationships if they are available
+			dominanceFrontier = DominanceAnalysis.getDominanceFrontiers().retainEdges().eval();
+		} else {
+			dominanceFrontier = Common.toQ(DominanceAnalysis.computeDominanceFrontier(ucfg)).retainEdges().eval();
+		}
+		
+		// initialize the sandbox universe
+		this.sandbox = new Sandbox();
+		this.sandbox.setFlushProvider(new PCGFlushProvider());
+		this.sandbox.addGraph(dominanceFrontier);
+		this.sandbox.addGraph(ucfg.getGraph());
+		
+		// save the sandbox nodes, edges, and events to iterate over
+		this.ucfg = sandbox.graph(ucfg.getGraph());
+		this.masterEntry = (SandboxNode) sandbox.getAt(ucfg.getEntryNode().address().toAddressString());
+		this.masterExit = (SandboxNode) sandbox.getAt(ucfg.getExitNode().address().toAddressString());
+		this.dominanceFrontier = sandbox.graph(dominanceFrontier);
+		this.nodes = sandbox.nodes(ucfg.getGraph().nodes());
+		this.edges = sandbox.edges(ucfg.getGraph().edges());
+		this.events = sandbox.nodes(events);
+	}
 	
 	/**
 	 * Given a CFG, construct PCG
@@ -251,41 +276,26 @@ public class PCGFactory {
 			this.edges.remove(edge);
 		}
 		
-//		Graph pcg = Common.resolve(new NullProgressMonitor(), Common.toQ(new UncheckedGraph(nodes, edges)).retainEdges().eval());
-		
-//		// tag the pcg with the instance id
-//		for(Node pcgNode : pcg.nodes()){
-//			pcgNode.tag(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
-//		}
-//		for(Edge pcgEdge : pcg.edges()){
-//			pcgEdge.tag(PCG.EventFlow_Instance_Prefix + pcgInstanceID);
-//		}
-//		
-//		// attribute the master entry node with the pcg instance parameters and default supplemental data
-//		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_Parameters_Prefix + pcgInstanceID, pcgParameters);
-//		ucfg.getEntryNode().putAttr(PCG.EventFlow_Instance_SupplementalData_Prefix + pcgInstanceID, getDefaultSupplementalData());
-		
 		SandboxGraph pcg = sandbox.toGraph(nodes, edges);
+		
+		// tag the entry and exit nodes
+		masterEntry.tag(PCG.PCGNode.EventFlow_Master_Entry);
+		masterExit.tag(PCG.PCGNode.EventFlow_Master_Exit);
+		
+		// tag each edge as an event flow edge
+		// this gets an edges from the master entry to the roots
+		// and from the exits to the master exit
+		for(SandboxEdge edge : pcg.edges()){
+			edge.tag(PCG.PCGEdge.EventFlow_Edge);
+		}		
 
-		// construct the pcg object
-		return new PCG(sandbox.flush(pcg));
+		// flush the result and construct the PCG object
+		Graph atlasPCG = sandbox.flush(pcg);
+		PCG result = new PCG(atlasPCG, atlasUCFG, atlasEvents);
+		// save the pcg instance parameters to the master entry node EventFlow_Instances attribute
+		PCG.save(result); 
+		return result;
 	}
-	
-//	/**
-//	 * Returns a JSON object string of default supplemental values for a PCG instance,
-//	 * this list may optionally be extended to store additional details for PCGs without
-//	 * affecting the core PCG implementation
-//	 * @return
-//	 */
-//	@SuppressWarnings("unchecked")
-//	private String getDefaultSupplementalData() {
-//		JSONObject json = new JSONObject();
-//		long time = System.currentTimeMillis();
-//		json.put(PCG.JSON_CREATED, time);
-//		json.put(PCG.JSON_LAST_ACCESSED, time);
-//		json.put(PCG.JSON_GIVEN_NAME, "");
-//		return json.toJSONString();
-//	}
 
 	/**
 	 * Consumes the given non-event node bypassing it through connecting its
@@ -423,13 +433,13 @@ public class PCGFactory {
 		}
 		if (!betweenEdges.isEmpty()) {
 			SandboxEdge edge = betweenEdges.one();
-			edge.tag(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID);
+			edge.tag(PCGEdge.EventFlow_Edge);
 			return edge;
 		}
 
 		// second - check if there exists an EventFlow edge (for this instance), if there is use it
 		// the edge to ignore removes previous edges so this is looks like a first run computation
-		SandboxHashSet<SandboxEdge> pcgEdges = sandbox.toGraph(sandbox.U.edges(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID)).betweenStep(from, to).edges();
+		SandboxHashSet<SandboxEdge> pcgEdges = sandbox.toGraph(sandbox.U.edges(PCGEdge.EventFlow_Edge)).betweenStep(from, to).edges();
 		betweenEdges = sandbox.emptyEdgeSet();
 		if (filterConditions) {
 			betweenEdges = pcgEdges.filter(XCSG.conditionValue, conditionValue);
@@ -448,7 +458,7 @@ public class PCGFactory {
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(PCGEdge.EventFlow_Edge_Instance_Prefix + pcgInstanceID);
+		pcgEdge.tag(PCGEdge.EventFlow_Edge);
 		
 		return pcgEdge;
 	}
