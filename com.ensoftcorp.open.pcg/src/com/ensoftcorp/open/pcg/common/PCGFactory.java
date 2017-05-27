@@ -74,7 +74,7 @@ public class PCGFactory {
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
-		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes());
+		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
 		return create(ucfg, events);
 	}
 	
@@ -264,17 +264,13 @@ public class PCGFactory {
 		}
 		
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
-		HashSet<SandboxEdge> edgesToRemove = new HashSet<SandboxEdge>();
+		SandboxHashSet<SandboxEdge> pcgEdgeSet = new SandboxHashSet<SandboxEdge>(sandbox.getInstanceID());
 		for (SandboxEdge edge : edges) {
-			if (!nodes.contains(edge.getNode(EdgeDirection.FROM)) && nodes.contains(edge.getNode(EdgeDirection.TO)) ) {
-				edgesToRemove.add(edge);
+			if (nodes.contains(edge.getNode(EdgeDirection.FROM)) && nodes.contains(edge.getNode(EdgeDirection.TO))) {
+				pcgEdgeSet.add(edge);
 			}
 		}
-		
-		// remove the disconnected edges in the previous loop
-		for(SandboxEdge edge : edgesToRemove){
-			this.edges.remove(edge);
-		}
+		edges = pcgEdgeSet;
 		
 		SandboxGraph pcg = sandbox.toGraph(nodes, edges);
 		
@@ -289,6 +285,10 @@ public class PCGFactory {
 			edge.tag(PCG.PCGEdge.EventFlow_Edge);
 		}		
 
+//		// a final sanity check - nodes should only be included 
+//		// if they are reachable on the path pcg.between(masterEntry,masterExit)
+//		pcg = pcg.between(masterEntry, masterExit);
+		
 		// flush the result and construct the PCG object
 		Graph atlasPCG = sandbox.flush(pcg);
 		PCG result = new PCG(atlasPCG, atlasUCFG, atlasEvents);

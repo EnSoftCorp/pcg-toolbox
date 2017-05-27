@@ -1,7 +1,7 @@
 package com.ensoftcorp.open.pcg.ui.smart;
 
-import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.script.StyledResult;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
@@ -60,10 +60,10 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		
 		Q pcg = PCGFactory.create(events, inlcudeExceptionalControlFlow()).getPCG();
 		
-		Markup m = new Markup();
-		HighlighterUtils.applyHighlightsForCFEdges(m);
+		// need to union in the contains edges becaues they are not contained in the default index
+		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));
 		
-		return new StyledResult(pcg, m);
+		return new StyledResult(pcg, HighlighterUtils.getPCGMarkup(pcg, events));
 	}
 	
 	private static class ControlFlowSelection {

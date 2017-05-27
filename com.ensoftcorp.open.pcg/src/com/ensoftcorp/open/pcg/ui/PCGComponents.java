@@ -15,7 +15,7 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	private AtlasSet<Node> includedAncestors;
 	private AtlasSet<Node> expandedFunctions;
 	private boolean exceptionalControlFlow;
-	private boolean callEdgeOverlay;
+	private boolean extendStructure;
 
 	public PCGComponents(String name) {
 		this.name = name;
@@ -24,7 +24,7 @@ public class PCGComponents implements Comparable<PCGComponents> {
 		this.includedAncestors = new AtlasHashSet<Node>();
 		this.expandedFunctions = new AtlasHashSet<Node>();
 		exceptionalControlFlow = false;
-		callEdgeOverlay = true;
+		extendStructure = true;
 	}
 	
 	public String getName() {
@@ -43,12 +43,12 @@ public class PCGComponents implements Comparable<PCGComponents> {
 		this.exceptionalControlFlow = exceptionalControlFlow;
 	}
 
-	public boolean isCallEdgeOverlayEnabled() {
-		return callEdgeOverlay;
+	public boolean isExtendStructureEnabled() {
+		return extendStructure;
 	}
 
-	public void setCallEdgeOverlay(boolean callEdgeOverlay) {
-		this.callEdgeOverlay = callEdgeOverlay;
+	public void setExtendStructure(boolean extendStructure) {
+		this.extendStructure = extendStructure;
 	}
 	
 	public AtlasSet<Node> getControlFlowEvents() {
