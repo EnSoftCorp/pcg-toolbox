@@ -285,8 +285,9 @@ public class PCGFactory {
 			edge.tag(PCG.PCGEdge.EventFlow_Edge);
 		}		
 
-//		// a final sanity check - nodes should only be included 
-//		// if they are reachable on the path pcg.between(masterEntry,masterExit)
+		// as a final sanity check - we could check that nodes should only be included 
+		// if they are reachable on the path pcg.between(masterEntry,masterExit)
+		// disabled because not really needed and sandbox between isn't efficient
 //		pcg = pcg.between(masterEntry, masterExit);
 		
 		// flush the result and construct the PCG object
