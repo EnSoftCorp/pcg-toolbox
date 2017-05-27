@@ -1,4 +1,4 @@
-package com.ensoftcorp.open.pcg.common;
+package com.ensoftcorp.open.pcg.common.highlighter;
 
 import java.awt.Color;
 
@@ -9,34 +9,22 @@ import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
+import com.ensoftcorp.open.jimple.commons.highlighter.CFGHighlighter;
+import com.ensoftcorp.open.pcg.common.IPCG;
+import com.ensoftcorp.open.pcg.common.PCG;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
-public class HighlighterUtils {
-
-	public static final Color cfgDefault = java.awt.Color.GRAY;
-	public static final Color cfgTrue = java.awt.Color.WHITE;
-	public static final Color cfgFalse = java.awt.Color.BLACK;
-	public static final Color cfgExceptional = java.awt.Color.BLUE;
+public class PCGHighlighter {
 
 	public static final Color pcgEvent = java.awt.Color.CYAN;
 	public static final Color ipcgMaster = java.awt.Color.GRAY;
 	
-	/**
-	 * GRAY  = ControlFlowBackEdge
-	 * GREEN = true ControlFlow_Edges
-	 * RED   = false ControlFlow_Edges
-	 * BLUE  = ExceptionalControlFlow_Edges
-	 * @param h
-	 */
 	public static void applyHighlightsForCFEdges(Markup m) {
-		Q cfEdge = Query.universe().edgesTaggedWithAny(XCSG.ControlFlow_Edge, PCG.PCGEdge.EventFlow_Edge);
-		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, cfgDefault);
-		Q cvTrue = Query.universe().selectEdge(XCSG.conditionValue, Boolean.TRUE, "true");
-		Q cvFalse = Query.universe().selectEdge(XCSG.conditionValue, Boolean.FALSE, "false");
-		m.setEdge(cvTrue, MarkupProperty.EDGE_COLOR, cfgTrue);
-		m.setEdge(cvFalse, MarkupProperty.EDGE_COLOR, cfgFalse);
-		m.setEdge(Query.universe().edgesTaggedWithAny(XCSG.ExceptionalControlFlow_Edge), MarkupProperty.EDGE_COLOR, cfgExceptional);
+		CFGHighlighter.applyHighlightsForCFEdges(m);
+		// treat event flow edges as control flow edges
+		Q cfEdge = Query.universe().edgesTaggedWithAny(PCG.PCGEdge.EventFlow_Edge);
+		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 	}
 	
 	public static Markup getPCGMarkup(Q pcg, Q events) {
@@ -44,6 +32,8 @@ public class HighlighterUtils {
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
 		// highlight control flow edges
 		applyHighlightsForCFEdges(m);
+		CFGHighlighter.applyHighlightsForLoopDepth(m);
+		
 		return m;
 	}
 	
@@ -77,6 +67,7 @@ public class HighlighterUtils {
 
 		// highlight control flow edges
 		applyHighlightsForCFEdges(m);
+		CFGHighlighter.applyHighlightsForLoopDepth(m);
 		
 		return m;
 	}

@@ -29,8 +29,8 @@ import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
-import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
+import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
 public class PCGLogView extends ViewPart {
 
@@ -470,7 +470,7 @@ public class PCGLogView extends ViewPart {
 		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
 		Markup markup = new Markup();
 		markup.setNode(pcg.getEvents(), MarkupProperty.NODE_BACKGROUND_COLOR, java.awt.Color.CYAN);
-		HighlighterUtils.applyHighlightsForCFEdges(markup);
+		PCGHighlighter.applyHighlightsForCFEdges(markup);
 		pcg.updateLastAccessTime();
 		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}

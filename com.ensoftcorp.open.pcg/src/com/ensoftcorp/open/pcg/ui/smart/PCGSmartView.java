@@ -8,8 +8,8 @@ import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.scripts.selections.FilteringAtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCGFactory;
+import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
 /**
  * Input:
@@ -68,7 +68,7 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		// need to union in the contains edges becaues they are not contained in the default index
 		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));
 		
-		return new StyledResult(pcg, HighlighterUtils.getPCGMarkup(pcg, events));
+		return new StyledResult(pcg, PCGHighlighter.getPCGMarkup(pcg, events));
 	}
 	
 	private static class ControlFlowSelection {

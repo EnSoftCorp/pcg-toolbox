@@ -49,8 +49,8 @@ import com.ensoftcorp.atlas.ui.selection.SelectionUtil;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
-import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.IPCG;
+import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
 public class PCGBuilderView extends ViewPart {
 
@@ -486,7 +486,7 @@ public class PCGBuilderView extends ViewPart {
 					Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 					Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 					Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
-					Markup pcgResultMarkup = HighlighterUtils.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
+					Markup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
 					DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
 				}
 			}
