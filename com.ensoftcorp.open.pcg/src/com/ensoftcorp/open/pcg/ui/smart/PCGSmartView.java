@@ -2,12 +2,12 @@ package com.ensoftcorp.open.pcg.ui.smart;
 
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
-import com.ensoftcorp.atlas.core.script.CommonQueries;
 import com.ensoftcorp.atlas.core.script.StyledResult;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.scripts.selections.FilteringAtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
+import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.pcg.common.HighlighterUtils;
 import com.ensoftcorp.open.pcg.common.PCGFactory;
 
@@ -55,6 +55,11 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		
 		// don't try to create a pcg if the selection is empty
 		if(CommonQueries.isEmpty(events)){
+			return null;
+		}
+		
+		// don't respond to inputs of events that span multiple functions
+		if(CommonQueries.getContainingFunctions(events).eval().nodes().size() > 1){
 			return null;
 		}
 		
