@@ -33,20 +33,14 @@ public class PCGHighlighter {
 		// highlight control flow edges
 		applyHighlightsForCFEdges(m);
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
-		
 		return m;
 	}
 	
 	public static Markup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
-		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
-		
+
 		Markup m = new Markup();
-		
-		// color the selected events
-		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
-		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
-		
+
 		// gray and dot the call edges
 		Q callEdges = Common.universe().edges(XCSG.Call).retainEdges();
 		m.setEdge(callEdges, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
@@ -68,6 +62,11 @@ public class PCGHighlighter {
 		// highlight control flow edges
 		applyHighlightsForCFEdges(m);
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
+		
+		// color the selected events
+		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
+		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
+		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
 		
 		return m;
 	}

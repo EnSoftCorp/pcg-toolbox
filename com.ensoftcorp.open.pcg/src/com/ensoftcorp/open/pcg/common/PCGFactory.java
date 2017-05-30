@@ -147,9 +147,10 @@ public class PCGFactory {
 					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
 					
 					Edge edge;
-					if(sandboxEdge.tags().contains(PCG.PCGEdge.EventFlow_Edge)){
+					if(sandboxEdge.tags().contains(PCGEdge.EventFlow_Edge)){
 						// only create event flow edges between nodes if one does not already exist
-						AtlasSet<Edge> betweenEdges = Common.universe().betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
+						Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.EventFlow_Edge);
+						AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
 						if(!betweenEdges.isEmpty()){
 							edge = betweenEdges.one();
 						} else {
@@ -452,7 +453,8 @@ public class PCGFactory {
 			}
 		}
 		if (!betweenEdges.isEmpty()) {
-			return betweenEdges.one();
+			SandboxEdge edge = betweenEdges.one();
+			return edge;
 		}
 
 		// finally - create a new edge and use it
@@ -460,7 +462,6 @@ public class PCGFactory {
 		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
 		pcgEdge.tag(PCGEdge.EventFlow_Edge);
-		
 		return pcgEdge;
 	}
 	
