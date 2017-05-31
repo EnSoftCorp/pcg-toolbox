@@ -2,6 +2,25 @@
 <?eclipse version="3.4"?>
 <plugin>
    
+   <!-- create an initializer extension to initialize preferences -->
+   <extension
+      point="org.eclipse.equinox.preferences.preferences">
+	   <initializer
+	         class="com.ensoftcorp.open.pcg.preferences.PCGPreferences">
+	   </initializer>
+	</extension>
+   
+   <!-- create a preferences page item for pcg toolbox -->
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="com.ensoftcorp.open.pcg.ui.PCGPreferencesPage"
+            id="com.ensoftcorp.open.pcg.ui.preferences"
+            name="Projected Control Graph (PCG)"
+            category="com.ensoftcorp.open.commons.ui.toolbox.preferences">
+      </page>
+   </extension>
+   
    <!-- Add the PCG Builder view -->
    <extension
          point="org.eclipse.ui.views">

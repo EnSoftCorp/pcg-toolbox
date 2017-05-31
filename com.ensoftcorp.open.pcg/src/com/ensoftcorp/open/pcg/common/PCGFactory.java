@@ -26,6 +26,7 @@ import com.ensoftcorp.open.commons.sandbox.SandboxGraphElement;
 import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
+import com.ensoftcorp.open.pcg.preferences.PCGPreferences;
 
 /**
  * A class that implements the event flow graph transformations to transform a given CFG into PCG
@@ -294,8 +295,12 @@ public class PCGFactory {
 		// flush the result and construct the PCG object
 		Graph atlasPCG = sandbox.flush(pcg);
 		PCG result = new PCG(atlasPCG, atlasUCFG, atlasEvents);
+		
 		// save the pcg instance parameters to the master entry node EventFlow_Instances attribute
-		PCG.save(result); 
+		if(PCGPreferences.isSerializePCGInstancesEnabled()){
+			PCG.save(result);
+		}
+		
 		return result;
 	}
 
