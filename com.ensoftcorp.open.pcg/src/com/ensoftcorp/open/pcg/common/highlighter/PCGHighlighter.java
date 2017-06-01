@@ -9,8 +9,9 @@ import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.jimple.commons.highlighter.CFGHighlighter;
+import com.ensoftcorp.open.commons.highlighter.CFGHighlighter;
 import com.ensoftcorp.open.pcg.common.IPCG;
+import com.ensoftcorp.open.pcg.common.IPCG.IPCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
@@ -20,25 +21,27 @@ public class PCGHighlighter {
 	public static final Color pcgEvent = java.awt.Color.CYAN;
 	public static final Color ipcgMaster = java.awt.Color.GRAY;
 	
-	public static void applyHighlightsForCFEdges(Markup m) {
-		CFGHighlighter.applyHighlightsForCFEdges(m);
-		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edgesTaggedWithAny(PCG.PCGEdge.EventFlow_Edge);
-		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
-	}
-	
-	public static Markup getPCGMarkup(Q pcg, Q events) {
+	public static Markup getPCGMarkup(Q events) {
 		Markup m = new Markup();
-		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
+
 		// highlight control flow edges
-		applyHighlightsForCFEdges(m);
+		CFGHighlighter.applyHighlightsForCFEdges(m);
+		
+		// treat event flow edges as control flow edges
+		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge);
+		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
+		
+		// highlight loop depths
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
+		
+		// color events (this should override previous settings)
+		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
+		
 		return m;
 	}
 	
 	public static Markup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
-
 		Markup m = new Markup();
 
 		// gray and dot the call edges
@@ -60,10 +63,16 @@ public class PCGHighlighter {
 		m.setNode(ipcgCallGraphRootMasterNodes, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 
 		// highlight control flow edges
-		applyHighlightsForCFEdges(m);
+		CFGHighlighter.applyHighlightsForCFEdges(m);
+		
+		// treat event flow edges as control flow edges
+		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge, IPCGEdge.InterproceduralEventFlow_Edge);
+		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
+		
+		// highlight loop depths
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
 		
-		// color the selected events
+		// color the events and implicit callsite events (this should override previous settings)
 		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
 		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);

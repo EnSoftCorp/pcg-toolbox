@@ -468,9 +468,7 @@ public class PCGLogView extends ViewPart {
 			givenName = "";
 		}
 		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
-		Markup markup = new Markup();
-		markup.setNode(pcg.getEvents(), MarkupProperty.NODE_BACKGROUND_COLOR, java.awt.Color.CYAN);
-		PCGHighlighter.applyHighlightsForCFEdges(markup);
+		Markup markup = PCGHighlighter.getPCGMarkup(pcg.getEvents());
 		pcg.updateLastAccessTime();
 		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}
