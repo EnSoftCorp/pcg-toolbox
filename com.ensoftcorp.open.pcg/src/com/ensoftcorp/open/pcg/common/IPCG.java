@@ -13,8 +13,8 @@ import com.ensoftcorp.atlas.core.log.Log;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.open.commons.analysis.CallSiteAnalysis;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.java.commons.analysis.CallSiteAnalysis;
 
 public class IPCG {
 	
@@ -64,7 +64,7 @@ public class IPCG {
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
-					Q expandedFunctionCallsiteTargets = CallSiteAnalysis.getTargetMethods(expandedFunctionCallsite);
+					Q expandedFunctionCallsiteTargets = Common.toQ(CallSiteAnalysis.getTargets(expandedFunctionCallsite));
 					Q expandedFunctionCallsiteCallGraphRestrictedTargets = expandedFunctionCallsiteTargets.intersection(ipcgFunctions);
 					if(!expandedFunctionCallsiteCallGraphRestrictedTargets.eval().nodes().isEmpty()){
 						implicitCallsiteEvents.add(expandedFunctionCallsiteCF);
@@ -107,7 +107,7 @@ public class IPCG {
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
-					Q expandedFunctionCallsiteTargets = CallSiteAnalysis.getTargetMethods(expandedFunctionCallsite);
+					Q expandedFunctionCallsiteTargets = Common.toQ(CallSiteAnalysis.getTargets(expandedFunctionCallsite));
 					Q expandedFunctionCallsiteCallGraphRestrictedTargets = expandedFunctionCallsiteTargets.intersection(ipcgFunctions);
 					if(!expandedFunctionCallsiteCallGraphRestrictedTargets.eval().nodes().isEmpty()){
 						expandedFunctionEvents.add(expandedFunctionCallsiteCF); // set only keeps 1 copy, ok for multiple targets
@@ -126,7 +126,7 @@ public class IPCG {
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
-					Q expandedFunctionCallsiteTargets = CallSiteAnalysis.getTargetMethods(expandedFunctionCallsite);
+					Q expandedFunctionCallsiteTargets = Common.toQ(CallSiteAnalysis.getTargets(expandedFunctionCallsite));
 					Q expandedFunctionCallsiteCallGraphRestrictedTargets = expandedFunctionCallsiteTargets.intersection(ipcgFunctions);
 					for(Node expandedFunctionCallsiteCallGraphRestrictedTarget : expandedFunctionCallsiteCallGraphRestrictedTargets.eval().nodes()){
 						if(CommonQueries.isEmpty(Common.toQ(expandedFunctionCallsiteCallGraphRestrictedTarget).intersection(expandedFunctions))){

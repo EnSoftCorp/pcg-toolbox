@@ -482,12 +482,16 @@ public class PCGBuilderView extends ViewPart {
 				if(noControlFlowEvents){
 					DisplayUtils.showError("No control flow events are defined.");
 				} else {
-					Q events = Common.toQ(pcg.getControlFlowEvents());
-					Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
-					Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
-					Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
-					Markup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
-					DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+					try {
+						Q events = Common.toQ(pcg.getControlFlowEvents());
+						Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
+						Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
+						Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
+						Markup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
+						DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+					} catch (Throwable t){
+						DisplayUtils.showError(t, "An error occurred while constructing the IPCG.");
+					}
 				}
 			}
 		});
