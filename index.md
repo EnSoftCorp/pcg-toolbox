@@ -13,9 +13,11 @@ More details on PCGs can be found at [https://www.ece.iastate.edu/kcsl/apsec2016
 The aim of this project is to make PCG analysis practical to client analyses. The most useful features are outlined below.
 
 - Factory methods to compute Projected Control Graphs (PCGs) and Interprocedural Project Control Graphs (IPCGs)
-- Smart View to compute PCGs for selection events
+- Smart Views to compute PCGs for selection events
 - PCG Builder view to iteratively build PCGs and IPCGs
 - PCG Log view to track and load previous PCG computations across analysis sessions
+- Support for exceptional control flows
+- Support for C source, Java source, and Java bytecode
 
 ## Getting Started
 Ready to get started?
