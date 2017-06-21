@@ -26,7 +26,6 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.part.ViewPart;
 
 import com.ensoftcorp.atlas.core.markup.Markup;
-import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.PCG;

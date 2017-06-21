@@ -12,7 +12,6 @@ import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.highlighter.CFGHighlighter;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.IPCG.IPCGEdge;
-import com.ensoftcorp.open.pcg.common.PCG;
 import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
