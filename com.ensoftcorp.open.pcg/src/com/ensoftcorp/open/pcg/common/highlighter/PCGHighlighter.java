@@ -23,12 +23,13 @@ public class PCGHighlighter {
 	public static Markup getPCGMarkup(Q events) {
 		Markup m = new Markup();
 
-		// highlight control flow edges
-		CFGHighlighter.applyHighlightsForCFEdges(m);
-		
 		// treat event flow edges as control flow edges
 		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
+		
+		// highlight control flow edges
+		CFGHighlighter.applyHighlightsForCFEdges(m);
+		
 		
 		// highlight loop depths
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
@@ -61,12 +62,12 @@ public class PCGHighlighter {
 		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.successors(functionCFG).nodes(PCGNode.EventFlow_Master_Exit));
 		m.setNode(ipcgCallGraphRootMasterNodes, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 
-		// highlight control flow edges
-		CFGHighlighter.applyHighlightsForCFEdges(m);
-		
 		// treat event flow edges as control flow edges
 		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge, IPCGEdge.InterproceduralEventFlow_Edge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
+		
+		// highlight control flow edges
+		CFGHighlighter.applyHighlightsForCFEdges(m);
 		
 		// highlight loop depths
 		CFGHighlighter.applyHighlightsForLoopDepth(m);

@@ -65,7 +65,7 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		
 		Q pcg = PCGFactory.create(events, inlcudeExceptionalControlFlow()).getPCG();
 		
-		// need to union in the contains edges becaues they are not contained in the default index
+		// need to union in the contains edges because they are not contained in the default index
 		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));
 		
 		return new StyledResult(pcg, PCGHighlighter.getPCGMarkup(events));
