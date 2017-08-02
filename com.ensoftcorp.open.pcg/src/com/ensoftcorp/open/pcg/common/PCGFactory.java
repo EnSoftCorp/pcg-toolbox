@@ -105,7 +105,11 @@ public class PCGFactory {
 	private SandboxNode masterEntry;
 	private SandboxNode masterExit;
 	private SandboxHashSet<SandboxNode> events;
+	
+	/** ControlFlow_Node, EventFlow_Master_Entry, EventFlow_Master_Exit */
 	private SandboxHashSet<SandboxNode> nodes;
+	
+	/** ControlFlow_Edge, EventFlow_Edge */
 	private SandboxHashSet<SandboxEdge> edges;
 	
 	private UniqueEntryExitControlFlowGraph atlasUCFG;
@@ -116,7 +120,7 @@ public class PCGFactory {
 		 * Flushes the changes made or creation of a sandbox graph element to
 		 * the Atlas graph and updates the address map accordingly.
 		 * 
-		 * This implementation differes from the default implementation by
+		 * This implementation differs from the default implementation by
 		 * attempting to re-use EventFlow edges that already exist between the
 		 * two given nodes if the sandbox created a new edge between the two
 		 * edges.
@@ -222,7 +226,7 @@ public class PCGFactory {
 		this.atlasEvents = events;
 		Graph dominanceFrontier;
 		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() || CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()){
-			// use the pre-compute relationships if they are available
+			// use the pre-computed relationships if they are available
 			dominanceFrontier = DominanceAnalysis.getDominanceFrontiers().retainEdges().eval();
 		} else {
 			dominanceFrontier = Common.toQ(DominanceAnalysis.computeDominanceFrontier(ucfg)).retainEdges().eval();
@@ -248,10 +252,10 @@ public class PCGFactory {
 	 * Given a CFG, construct PCG
 	 * @return
 	 */
-	public PCG createPCG(){
+	private PCG createPCG(){
 		SandboxHashSet<SandboxNode> impliedEvents = getImpliedEvents();
 		
-		// retain a stack of node that are consumed to be removed from the graph after the loop
+		// retain a set of consumed nodes that are to be removed from the graph after the loop
 		SandboxHashSet<SandboxNode> nodesToRemove = sandbox.emptyNodeSet();
 		for(SandboxNode node : nodes){
 			if(!impliedEvents.contains(node)){
@@ -397,7 +401,7 @@ public class PCGFactory {
 	 * @return The set of implied nodes that need to be retained in the final PCG
 	 */
 	private SandboxHashSet<SandboxNode> getImpliedEvents() {
-		// start with the set of explict events to determine the implied events
+		// start with the set of explicit events to determine the implied events
 		SandboxHashSet<SandboxNode> impliedEvents = sandbox.emptyNodeSet();
 		impliedEvents.addAll(events);
 		long preSize = 0;
