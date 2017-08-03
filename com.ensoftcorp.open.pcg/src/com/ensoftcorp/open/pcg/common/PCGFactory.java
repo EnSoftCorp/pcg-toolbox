@@ -217,14 +217,14 @@ public class PCGFactory {
 	}
 	
 	/**
-	 * Constructs a PCG
+	 * Constructs a PCGFactory
 	 * @param ucfg
 	 * @param events
 	 */
 	private PCGFactory(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> events) {
 		this.atlasUCFG = ucfg;
 		this.atlasEvents = events;
-		Graph dominanceFrontier;
+		
 		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() 
 				|| CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()) {
 			// use the pre-computed relationships
@@ -233,11 +233,7 @@ public class PCGFactory {
 			DominanceAnalysis.computeDominanceFrontier(ucfg);
 		}
 		
-		// get the dominance frontier within the function
-		Q dominanceFrontierEdges = Common.universe().edges(DominanceAnalysis.DOMINANCE_FRONTIER_EDGE);
-		Q ucfgNodes = Common.toQ(ucfg.getGraph()).retainNodes();
-		dominanceFrontier = Common.resolve(null, ucfgNodes.induce(dominanceFrontierEdges).eval());
-		
+		AtlasSet<Node> allEvents = addImpliedEvents(ucfg, events);
 		
 		// initialize the sandbox universe
 		this.sandbox = new Sandbox();
@@ -245,27 +241,29 @@ public class PCGFactory {
 		this.sandbox.addGraph(dominanceFrontier);
 		this.sandbox.addGraph(ucfg.getGraph());
 		
-		// save the sandbox nodes, edges, and events to iterate over
-		this.ucfg = sandbox.graph(ucfg.getGraph());
-		this.masterEntry = (SandboxNode) sandbox.getAt(ucfg.getEntryNode().address().toAddressString());
-		this.masterExit = (SandboxNode) sandbox.getAt(ucfg.getExitNode().address().toAddressString());
-		this.dominanceFrontier = sandbox.graph(dominanceFrontier);
+		// populate sandbox
+		// assert: allEvents are a subset of the ucfg
+		this.ucfg = this.sandbox.addGraph(ucfg.getGraph());
+		
+		// select the sandbox nodes, edges, and events to iterate over
+		this.masterEntry = sandbox.node(ucfg.getEntryNode());
+		this.masterExit = sandbox.node(ucfg.getExitNode());
+		
 		this.nodes = sandbox.nodes(ucfg.getGraph().nodes());
 		this.edges = sandbox.edges(ucfg.getGraph().edges());
-		this.events = sandbox.nodes(events);
+		this.events = sandbox.nodes(allEvents);
 	}
 	
 	/**
-	 * Given a CFG, construct PCG
+	 * Construct PCG
 	 * @return
 	 */
 	private PCG createPCG(){
-		SandboxHashSet<SandboxNode> impliedEvents = getImpliedEvents();
 		
 		// retain a set of consumed nodes that are to be removed from the graph after the loop
 		SandboxHashSet<SandboxNode> nodesToRemove = sandbox.emptyNodeSet();
 		for(SandboxNode node : nodes){
-			if(!impliedEvents.contains(node)){
+			if(!events.contains(node)){
 				consumeNode(node);
 				nodesToRemove.add(node);
 			}
@@ -403,27 +401,25 @@ public class PCGFactory {
 	}
 	
 	/**
-	 * Performs dominance analysis on graph to compute the dominance frontier for every node in the graph.
-	 * Then, compute the final set of nodes that will be retained in the final sPCG
-	 * @return The set of implied nodes that need to be retained in the final PCG
+	 * Using dominance frontier, compute the set of implied event nodes.
+	 * @param ucfg
+	 * @return The set of event nodes that need to be retained in the final PCG, 
+	 * including implicit, explicit and start/exit nodes.
 	 */
-	private SandboxHashSet<SandboxNode> getImpliedEvents() {
-		// start with the set of explicit events to determine the implied events
-		SandboxHashSet<SandboxNode> impliedEvents = sandbox.emptyNodeSet();
-		impliedEvents.addAll(events);
-		long preSize = 0;
-		do {
-			preSize = impliedEvents.size();
-			SandboxHashSet<SandboxNode> newEvents = sandbox.emptyNodeSet();
-			for (SandboxNode element : impliedEvents) {
-				newEvents.addAll(dominanceFrontier.successors(element));
-			}
-			impliedEvents.addAll(newEvents);
-		} while (preSize != impliedEvents.size());
-
+	private AtlasSet<Node> addImpliedEvents(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> explicitEvents) {
+		// get the dominance frontier within the function
+		Q dominanceFrontierEdges = Common.universe().edges(DominanceAnalysis.DOMINANCE_FRONTIER_EDGE);
+		Q ucfgNodes = Common.toQ(ucfg.getGraph()).retainNodes();
+		Q dominanceFrontier = Common.resolve(null, ucfgNodes.induce(dominanceFrontierEdges));
+		
+		Q qExplicitEvents = Common.toQ(Common.toGraph(explicitEvents));
+		AtlasSet<Node> impliedEvents = new AtlasHashSet<>();
+		AtlasSet<Node> qImpliedEvents = dominanceFrontier.forward(qExplicitEvents).eval().nodes();
+		impliedEvents.addAll(qImpliedEvents);
+		
 		// add entry and exit nodes as event nodes as well
-		impliedEvents.add(this.masterEntry);
-		impliedEvents.add(this.masterExit);
+		impliedEvents.add(ucfg.getEntryNode());
+		impliedEvents.add(ucfg.getExitNode());
 		
 		return impliedEvents;
 	}
