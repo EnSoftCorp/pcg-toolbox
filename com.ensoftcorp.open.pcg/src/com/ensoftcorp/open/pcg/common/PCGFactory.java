@@ -225,12 +225,19 @@ public class PCGFactory {
 		this.atlasUCFG = ucfg;
 		this.atlasEvents = events;
 		Graph dominanceFrontier;
-		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() || CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()){
-			// use the pre-computed relationships if they are available
-			dominanceFrontier = DominanceAnalysis.getDominanceFrontiers().retainEdges().eval();
+		if(CommonsPreferences.isComputeControlFlowGraphDominanceTreesEnabled() 
+				|| CommonsPreferences.isComputeExceptionalControlFlowGraphDominanceTreesEnabled()) {
+			// use the pre-computed relationships
 		} else {
-			dominanceFrontier = Common.toQ(DominanceAnalysis.computeDominanceFrontier(ucfg)).retainEdges().eval();
+			// calculate on demand
+			DominanceAnalysis.computeDominanceFrontier(ucfg);
 		}
+		
+		// get the dominance frontier within the function
+		Q dominanceFrontierEdges = Common.universe().edges(DominanceAnalysis.DOMINANCE_FRONTIER_EDGE);
+		Q ucfgNodes = Common.toQ(ucfg.getGraph()).retainNodes();
+		dominanceFrontier = Common.resolve(null, ucfgNodes.induce(dominanceFrontierEdges).eval());
+		
 		
 		// initialize the sandbox universe
 		this.sandbox = new Sandbox();
