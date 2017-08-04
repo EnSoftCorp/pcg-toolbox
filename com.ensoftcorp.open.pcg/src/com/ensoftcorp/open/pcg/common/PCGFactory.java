@@ -151,14 +151,11 @@ public class PCGFactory {
 					Node from = CommonQueries.getNodeByAddress(sandboxEdge.from().getAddress());
 					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
 					
-					Edge edge;
+					Edge edge = null;
 					if(sandboxEdge.tags().contains(PCGEdge.EventFlow_Edge)){
 						// only create event flow edges between nodes if one does not already exist
-						Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.EventFlow_Edge);
-						AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
-						if(!betweenEdges.isEmpty()){
-							edge = betweenEdges.one();
-						} else {
+						edge = findPCGEdge(sandboxEdge, from, to);
+						if (edge == null) {
 							edge = Graph.U.createEdge(from, to);
 						}
 					} else {
@@ -213,6 +210,26 @@ public class PCGFactory {
 				
 				return age;
 			}
+		}
+
+		/** find a compatible PCG Edge with respect to adjacent nodes and XCSG.conditionValue */
+		private Edge findPCGEdge(SandboxEdge sandboxEdge, Node from, Node to) {
+			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.EventFlow_Edge);
+			AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
+			boolean hasAttr = sandboxEdge.hasAttr(XCSG.conditionValue);
+			Object cv = sandboxEdge.getAttr(XCSG.conditionValue);
+			for (Edge be : betweenEdges) {
+				boolean hasAttr2 = be.hasAttr(XCSG.conditionValue);
+				Object cv2 = be.getAttr(XCSG.conditionValue);
+				if (hasAttr==hasAttr2) {
+					if (cv == null && cv==cv2) {
+						return be;
+					} else if (cv.equals(cv2)) {
+						return be;
+					}
+				}
+			}
+			return null;
 		}
 	}
 	
@@ -375,7 +392,7 @@ public class PCGFactory {
 		SandboxNode predecessor = inEdge.from();
 		for(SandboxNode successor : successors) {
 			this.getOrCreatePCGEdge(predecessor, successor, 
-					inEdge.attr().get(XCSG.conditionValue));
+					inEdge.getAttr(XCSG.conditionValue));
 		}
 		
 		// duplicate edges maybe be formed at the predecessor because of
@@ -407,11 +424,19 @@ public class PCGFactory {
 		for(SandboxNode successor : nodeEdgeMap.keySet()){
 			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
 			if(successorEdges.size() > 1){
-				SandboxEdge oldEdge = successorEdges.one();
-				this.getOrCreatePCGEdge(node, successor, 
-						oldEdge.attr().get(XCSG.conditionValue));
 				
-				pcg.edges().removeAll(successorEdges);
+				if (node.taggedWith(XCSG.ControlFlowIfCondition)) {
+					// assert: merging true and false
+					this.getOrCreatePCGEdge(node, successor, null);
+					pcg.edges().removeAll(successorEdges);
+					
+				} else if (node.taggedWith(XCSG.ControlFlowSwitchCondition)) {
+					// do not merge switch out edges
+					
+				} else {
+					throw new RuntimeException("Unhandled type of condition"); //$NON-NLS-1$
+				}
+				
 			}
 		}
 	}
@@ -478,9 +503,10 @@ public class PCGFactory {
 		
 		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
-		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
 		pcgEdge.tag(PCGEdge.EventFlow_Edge);
+		if (conditionValue!=null)
+			pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		
 		pcg.edges().add(pcgEdge);
 
