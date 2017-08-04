@@ -349,16 +349,7 @@ public class PCGFactory {
 		
 		// add PCG edges
 		for(SandboxEdge inEdge : predecessorEdges) {
-			SandboxNode predecessor = inEdge.from();
-			for(SandboxNode successor : successors) {
-				this.getOrCreatePCGEdge(predecessor, successor, 
-						inEdge.attr().containsKey(XCSG.conditionValue), 
-						inEdge.attr().get(XCSG.conditionValue));
-			}
-			
-			// duplicate edges maybe be formed at the predecessor because of
-			// consuming the current node, so merge if needed
-			this.removeDoubleEdges(predecessor);
+			connectToSuccessors(inEdge, successors);
 		}
 		
 		// remove original inEdges for the node
@@ -367,12 +358,41 @@ public class PCGFactory {
 		// remove original outEdges for the node
 		pcg.edges().removeAll(outEdges);
 	}
+
+	/**
+	 * Connect inEdge.from() to all successors, consolidating duplicate edges as needed.
+	 * 
+	 * For example, when both true and false edges reach the same successor, they are combined
+	 * into a single edge.
+	 * 
+	 * @param inEdge
+	 * @param successors
+	 */
+	private void connectToSuccessors(SandboxEdge inEdge, Set<SandboxNode> successors) {
+		
+		// FIXME do not create anything until we know what the final state should be - how would removeDouble figure out which one is redundant anyway?
+		
+		SandboxNode predecessor = inEdge.from();
+		for(SandboxNode successor : successors) {
+			this.getOrCreatePCGEdge(predecessor, successor, 
+					inEdge.attr().get(XCSG.conditionValue));
+		}
+		
+		// duplicate edges maybe be formed at the predecessor because of
+		// consuming the current node, so merge if needed
+		this.removeDuplicateEdges(predecessor);
+	}
 	
-	private void removeDoubleEdges(SandboxNode node){
+	/**
+	 * remove duplicate successor edges
+	 * @param node
+	 */
+	private void removeDuplicateEdges(SandboxNode node){
 		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
 		if(outEdges.size() < 2){
 			return;
 		}
+		
 		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
 		for(SandboxEdge outEdge : outEdges){
 			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
@@ -389,11 +409,9 @@ public class PCGFactory {
 			if(successorEdges.size() > 1){
 				SandboxEdge oldEdge = successorEdges.one();
 				this.getOrCreatePCGEdge(node, successor, 
-						oldEdge.attr().containsKey(XCSG.conditionValue), 
 						oldEdge.attr().get(XCSG.conditionValue));
-				for(SandboxEdge successorEdge : successorEdges){
-					pcg.edges().remove(successorEdge);
-				}
+				
+				pcg.edges().removeAll(successorEdges);
 			}
 		}
 	}
@@ -423,50 +441,42 @@ public class PCGFactory {
 	}
 	
 	/**
-	 * Checks if the intended PCG edge exists as a CFG or PCG edge, 
-	 * otherwise, it creates the edge 
-	 * @param from the node where the edge originates from
-	 * @param to the node where the edge goes into
-	 * @return the existent PCG edge or newly created PCG edge
+	 * Finds or creates a edge in the PCG between the specified nodes with the conditionValue.
+	 * 
+	 * @param from predecessor
+	 * @param to successor
+	 * @param conditionValue the conditionValue, or null on unconditional edges
+	 * @return the edge
 	 */
-	private SandboxEdge getOrCreatePCGEdge(SandboxNode from, SandboxNode to, boolean filterConditions, Object conditionValue) {
-		// first - Check if there is an existing CFG edge, if there is tag it as an event flow edge
-		SandboxHashSet<SandboxEdge> betweenEdges = sandbox.emptyEdgeSet();
-		SandboxHashSet<SandboxEdge> cfgEdges = pcg.betweenStep(from, to).edges();
-		if (filterConditions) {
-			betweenEdges = cfgEdges.filter(XCSG.conditionValue, conditionValue);
-		} else {
-			for (SandboxEdge edge : cfgEdges) {
-				if (!edge.hasAttr(XCSG.conditionValue)) {
-					betweenEdges.add(edge);
+	private SandboxEdge getOrCreatePCGEdge(SandboxNode from, SandboxNode to, Object conditionValue) {
+		
+		SandboxHashSet<SandboxEdge> edges = pcg.edges(from, NodeDirection.OUT);
+		
+		// find match
+		for (SandboxEdge edge : edges) {
+			if (!to.equals(edge.to())) {
+				continue;
+			}
+			boolean hasAttr = edge.hasAttr(XCSG.conditionValue);
+			if (conditionValue == null) {
+				// looking for an edge WITHOUT the attribute
+				if (!hasAttr) {
+					return edge;
+				}
+			} else {
+				// looking for an edge with the same value
+				if (hasAttr) {
+					Object attr = edge.getAttr(XCSG.conditionValue);
+					if (conditionValue.equals(attr)) {
+						return edge;
+					}
 				}
 			}
 		}
-		if (!betweenEdges.isEmpty()) {
-			SandboxEdge edge = betweenEdges.one();
-			edge.tag(PCGEdge.EventFlow_Edge);
-			return edge;
-		}
-
-		// second - check if there exists an EventFlow edge (for this instance), if there is use it
-		// the edge to ignore removes previous edges so this is looks like a first run computation
-		SandboxHashSet<SandboxEdge> pcgEdges = sandbox.toGraph(sandbox.U.edges(PCGEdge.EventFlow_Edge)).betweenStep(from, to).edges();
-		betweenEdges = sandbox.emptyEdgeSet();
-		if (filterConditions) {
-			betweenEdges = pcgEdges.filter(XCSG.conditionValue, conditionValue);
-		} else {
-			for (SandboxEdge edge : pcgEdges) {
-				if (!edge.hasAttr(XCSG.conditionValue)) {
-					betweenEdges.add(edge);
-				}
-			}
-		}
-		if (!betweenEdges.isEmpty()) {
-			SandboxEdge edge = betweenEdges.one();
-			return edge;
-		}
-
-		// finally - create a new edge and use it
+		
+		// assert: no match
+		
+		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
