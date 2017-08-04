@@ -9,7 +9,9 @@ import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement.NodeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
+import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
@@ -100,20 +102,18 @@ public class PCGFactory {
 	
 	// temporary variables for use in factory construction of a pcg
 	private Sandbox sandbox;
-	private SandboxGraph ucfg;
-	private SandboxGraph dominanceFrontier;
 	private SandboxNode masterEntry;
 	private SandboxNode masterExit;
 	private SandboxHashSet<SandboxNode> events;
 	
-	/** ControlFlow_Node, EventFlow_Master_Entry, EventFlow_Master_Exit */
-	private SandboxHashSet<SandboxNode> nodes;
-	
-	/** ControlFlow_Edge, EventFlow_Edge */
-	private SandboxHashSet<SandboxEdge> edges;
-	
 	private UniqueEntryExitControlFlowGraph atlasUCFG;
 	private AtlasSet<Node> atlasEvents;
+	
+	/** Sandbox universe.
+	 *  Initialized to CFG, transformed to the PCG
+	 *  Nodes: ControlFlow_Edge, EventFlow_Edge 
+	 *  Edges: ControlFlow_Node, EventFlow_Master_Entry, EventFlow_Master_Exit */
+	private SandboxGraph pcg;
 	
 	private static class PCGFlushProvider extends DefaultFlushProvider {
 		/**
@@ -238,19 +238,17 @@ public class PCGFactory {
 		// initialize the sandbox universe
 		this.sandbox = new Sandbox();
 		this.sandbox.setFlushProvider(new PCGFlushProvider());
-		this.sandbox.addGraph(dominanceFrontier);
-		this.sandbox.addGraph(ucfg.getGraph());
 		
-		// populate sandbox
+		this.pcg = sandbox.universe();
+		
+		// populate sandbox universe
 		// assert: allEvents are a subset of the ucfg
-		this.ucfg = this.sandbox.addGraph(ucfg.getGraph());
+		this.sandbox.addGraph(ucfg.getGraph());
 		
 		// select the sandbox nodes, edges, and events to iterate over
 		this.masterEntry = sandbox.node(ucfg.getEntryNode());
 		this.masterExit = sandbox.node(ucfg.getExitNode());
 		
-		this.nodes = sandbox.nodes(ucfg.getGraph().nodes());
-		this.edges = sandbox.edges(ucfg.getGraph().edges());
 		this.events = sandbox.nodes(allEvents);
 	}
 	
@@ -262,7 +260,7 @@ public class PCGFactory {
 		
 		// retain a set of consumed nodes that are to be removed from the graph after the loop
 		SandboxHashSet<SandboxNode> nodesToRemove = sandbox.emptyNodeSet();
-		for(SandboxNode node : nodes){
+		for(SandboxNode node : pcg.nodes()) {
 			if(!events.contains(node)){
 				consumeNode(node);
 				nodesToRemove.add(node);
@@ -270,20 +268,18 @@ public class PCGFactory {
 		}
 		
 		// remove the consumed nodes in the previous loop
-		for(SandboxNode node : nodesToRemove){
-			nodes.remove(node);
-		}
+		pcg.nodes().removeAll(nodesToRemove);
 		
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
 		SandboxHashSet<SandboxEdge> pcgEdgeSet = new SandboxHashSet<SandboxEdge>(sandbox.getInstanceID());
-		for (SandboxEdge edge : edges) {
-			if (nodes.contains(edge.getNode(EdgeDirection.FROM)) && nodes.contains(edge.getNode(EdgeDirection.TO))) {
+		for (SandboxEdge edge : pcg.edges()) {
+			if (pcg.nodes().contains(edge.getNode(EdgeDirection.FROM)) && pcg.nodes().contains(edge.getNode(EdgeDirection.TO))) {
 				pcgEdgeSet.add(edge);
 			}
 		}
-		edges = pcgEdgeSet;
+		pcg.edges().clear();
+		pcg.edges().addAll(pcgEdgeSet);
 		
-		SandboxGraph pcg = sandbox.toGraph(nodes, edges);
 		
 		// tag the entry and exit nodes
 		masterEntry.tag(PCG.PCGNode.EventFlow_Master_Entry);
@@ -326,7 +322,7 @@ public class PCGFactory {
 		// conditional values
 		
 		// first: get the predecessors for the node
-		SandboxHashSet<SandboxEdge> inEdges = this.getInEdgesToNode(node);
+		SandboxHashSet<SandboxEdge> inEdges = pcg.edges(node, NodeDirection.IN);
 		HashMap<SandboxNode, SandboxEdge> predecessorEdgeMap = new HashMap<SandboxNode, SandboxEdge>(); 
 		for(SandboxEdge inEdge : inEdges){
 			SandboxNode predecessor = inEdge.getNode(EdgeDirection.FROM);
@@ -336,7 +332,7 @@ public class PCGFactory {
 		predecessorEdgeMap.keySet().remove(node);
 		
 		// second: get the successors for the node
-		SandboxHashSet<SandboxEdge> outEdges = this.getOutEdgesFromNode(node);
+		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
 		SandboxHashSet<SandboxNode> successors = sandbox.emptyNodeSet();
 		for(SandboxEdge outEdge : outEdges){
 			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
@@ -349,7 +345,7 @@ public class PCGFactory {
 			for(SandboxNode successor : successors){
 				SandboxEdge oldEdge = predecessorEdgeMap.get(predecessor);
 				SandboxEdge pcgEdge = this.getOrCreatePCGEdge(predecessor, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
-				edges.add(pcgEdge);
+				pcg.edges().add(pcgEdge);
 			}
 			
 			// duplicate edges maybe be formed at the predecessor because of
@@ -359,17 +355,17 @@ public class PCGFactory {
 		
 		// remove original inEdges for the node
 		for(SandboxEdge inEdge : inEdges){
-			edges.remove(inEdge);
+			pcg.edges().remove(inEdge);
 		}
 		
 		// remove original outEdges for the node
 		for(SandboxEdge outEdge : outEdges){
-			edges.remove(outEdge);
+			pcg.edges().remove(outEdge);
 		}
 	}
 	
 	private void removeDoubleEdges(SandboxNode node){
-		SandboxHashSet<SandboxEdge> outEdges = this.getOutEdgesFromNode(node);
+		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
 		if(outEdges.size() < 2){
 			return;
 		}
@@ -393,9 +389,9 @@ public class PCGFactory {
 				attrs.remove(XCSG.conditionValue);
 				SandboxEdge newEdge = this.getOrCreatePCGEdge(node, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
 				for(SandboxEdge successorEdge : successorEdges){
-					edges.remove(successorEdge);
+					pcg.edges().remove(successorEdge);
 				}
-				edges.add(newEdge);
+				pcg.edges().add(newEdge);
 			}
 		}
 	}
@@ -435,7 +431,7 @@ public class PCGFactory {
 	private SandboxEdge getOrCreatePCGEdge(SandboxNode from, SandboxNode to, boolean filterConditions, Object conditionValue) {
 		// first - Check if there is an existing CFG edge, if there is tag it as an event flow edge
 		SandboxHashSet<SandboxEdge> betweenEdges = sandbox.emptyEdgeSet();
-		SandboxHashSet<SandboxEdge> cfgEdges = ucfg.betweenStep(from, to).edges();
+		SandboxHashSet<SandboxEdge> cfgEdges = pcg.betweenStep(from, to).edges();
 		if (filterConditions) {
 			betweenEdges = cfgEdges.filter(XCSG.conditionValue, conditionValue);
 		} else {
@@ -477,33 +473,4 @@ public class PCGFactory {
 		return pcgEdge;
 	}
 	
-	/**
-	 * Gets incoming edges to node
-	 * @param node
-	 * @return The set of incoming edges to the given node
-	 */
-	private SandboxHashSet<SandboxEdge> getInEdgesToNode(SandboxNode node){
-		SandboxHashSet<SandboxEdge> inEdges = sandbox.emptyEdgeSet();
-		for(SandboxEdge edge : edges){
-			if(edge.getNode(EdgeDirection.TO).equals(node)){
-				inEdges.add(edge);
-			}
-		}
-		return inEdges;
-	}
-	
-	/**
-	 * Gets out-coming edges from node
-	 * @param node
-	 * @return The set of out-coming edges from the given node
-	 */
-	private SandboxHashSet<SandboxEdge> getOutEdgesFromNode(SandboxNode node){
-		SandboxHashSet<SandboxEdge> outEdges = sandbox.emptyEdgeSet();
-		for(SandboxEdge edge : edges){
-			if(edge.getNode(EdgeDirection.FROM).equals(node)){
-				outEdges.add(edge);
-			}
-		}
-		return outEdges;
-	}
 }
