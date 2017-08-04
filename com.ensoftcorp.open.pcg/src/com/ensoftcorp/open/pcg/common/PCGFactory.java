@@ -273,7 +273,8 @@ public class PCGFactory {
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
 		SandboxHashSet<SandboxEdge> pcgEdgeSet = new SandboxHashSet<SandboxEdge>(sandbox.getInstanceID());
 		for (SandboxEdge edge : pcg.edges()) {
-			if (pcg.nodes().contains(edge.getNode(EdgeDirection.FROM)) && pcg.nodes().contains(edge.getNode(EdgeDirection.TO))) {
+			if (pcg.nodes().contains(edge.getNode(EdgeDirection.FROM)) 
+					&& pcg.nodes().contains(edge.getNode(EdgeDirection.TO))) {
 				pcgEdgeSet.add(edge);
 			}
 		}
@@ -311,41 +312,48 @@ public class PCGFactory {
 
 	/**
 	 * Consumes the given non-event node bypassing it through connecting its
-	 * predecessors with successors while preserving edges contents especially
-	 * for branches.
+	 * predecessors with successors. New edges are PCG edges and summarize
+	 * conditionValues, but do not retain other tags or attributes from the
+	 * elided subgraph.
 	 * 
-	 * @param node: non-event node to be removed from the final PCG
+	 * @param node non-event node to be removed from the final PCG
 	 */
-	private void consumeNode(SandboxNode node){
+	private void consumeNode(SandboxNode node) {
 		// this function will consume the given node by bypassing it through
 		// connecting its predecessors with successors while preserving edge's
 		// conditional values
 		
 		// first: get the predecessors for the node
 		SandboxHashSet<SandboxEdge> inEdges = pcg.edges(node, NodeDirection.IN);
-		HashMap<SandboxNode, SandboxEdge> predecessorEdgeMap = new HashMap<SandboxNode, SandboxEdge>(); 
-		for(SandboxEdge inEdge : inEdges){
-			SandboxNode predecessor = inEdge.getNode(EdgeDirection.FROM);
-			predecessorEdgeMap.put(predecessor, inEdge);
+		Set<SandboxEdge> predecessorEdges = new HashSet<>(); 
+		for(SandboxEdge inEdge : inEdges) {
+			SandboxNode predecessor = inEdge.from();
+			if (node.equals(predecessor)) {
+				// skip the case where the node has a self-loop. This will cause infinite recursion
+				continue;
+			}
+			predecessorEdges.add(inEdge);
 		}
-		// remove the case where the node has a self-loop. This will cause infinite recursion
-		predecessorEdgeMap.keySet().remove(node);
 		
 		// second: get the successors for the node
 		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
-		SandboxHashSet<SandboxNode> successors = sandbox.emptyNodeSet();
-		for(SandboxEdge outEdge : outEdges){
-			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
+		Set<SandboxNode> successors = new HashSet<>(); 
+		for(SandboxEdge outEdge : outEdges) {
+			SandboxNode successor = outEdge.to();
+			if (node.equals(successor)) {
+				// skip the case where the node has a self-loop. This will cause infinite recursion
+				continue;
+			}
 			successors.add(successor);
 		}
-		// remove the case where the node has a self-loop. This will cause infinite recursion
-		successors.remove(node);
 		
-		for(SandboxNode predecessor : predecessorEdgeMap.keySet()){
-			for(SandboxNode successor : successors){
-				SandboxEdge oldEdge = predecessorEdgeMap.get(predecessor);
-				SandboxEdge pcgEdge = this.getOrCreatePCGEdge(predecessor, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
-				pcg.edges().add(pcgEdge);
+		// add PCG edges
+		for(SandboxEdge inEdge : predecessorEdges) {
+			SandboxNode predecessor = inEdge.from();
+			for(SandboxNode successor : successors) {
+				this.getOrCreatePCGEdge(predecessor, successor, 
+						inEdge.attr().containsKey(XCSG.conditionValue), 
+						inEdge.attr().get(XCSG.conditionValue));
 			}
 			
 			// duplicate edges maybe be formed at the predecessor because of
@@ -354,14 +362,10 @@ public class PCGFactory {
 		}
 		
 		// remove original inEdges for the node
-		for(SandboxEdge inEdge : inEdges){
-			pcg.edges().remove(inEdge);
-		}
+		pcg.edges().removeAll(inEdges);
 		
 		// remove original outEdges for the node
-		for(SandboxEdge outEdge : outEdges){
-			pcg.edges().remove(outEdge);
-		}
+		pcg.edges().removeAll(outEdges);
 	}
 	
 	private void removeDoubleEdges(SandboxNode node){
@@ -369,7 +373,7 @@ public class PCGFactory {
 		if(outEdges.size() < 2){
 			return;
 		}
-		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<SandboxNode, SandboxHashSet<SandboxEdge>>();
+		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
 		for(SandboxEdge outEdge : outEdges){
 			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
 			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
@@ -384,14 +388,12 @@ public class PCGFactory {
 			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
 			if(successorEdges.size() > 1){
 				SandboxEdge oldEdge = successorEdges.one();
-				HashMap<String, Object> attrs = new HashMap<String, Object>();
-				attrs.putAll(oldEdge.attr());
-				attrs.remove(XCSG.conditionValue);
-				SandboxEdge newEdge = this.getOrCreatePCGEdge(node, successor, oldEdge.attr().containsKey(XCSG.conditionValue), oldEdge.attr().get(XCSG.conditionValue));
+				this.getOrCreatePCGEdge(node, successor, 
+						oldEdge.attr().containsKey(XCSG.conditionValue), 
+						oldEdge.attr().get(XCSG.conditionValue));
 				for(SandboxEdge successorEdge : successorEdges){
 					pcg.edges().remove(successorEdge);
 				}
-				pcg.edges().add(newEdge);
 			}
 		}
 	}
@@ -421,11 +423,10 @@ public class PCGFactory {
 	}
 	
 	/**
-	 * Check if the intended PCG edge does exist as a CFG edges or already created PCG edge, otherwise, it creates the edge and applies the given attributes and tags
-	 * @param from: the node where the edge originates from
-	 * @param to: the node where the edge goes into
-	 * @param attrs: the set of <String, Object> values that needs to be added to the newly created edge
-	 * @param tags: the set of <String> tags that needs to be applied to the newly created edge
+	 * Checks if the intended PCG edge exists as a CFG or PCG edge, 
+	 * otherwise, it creates the edge 
+	 * @param from the node where the edge originates from
+	 * @param to the node where the edge goes into
 	 * @return the existent PCG edge or newly created PCG edge
 	 */
 	private SandboxEdge getOrCreatePCGEdge(SandboxNode from, SandboxNode to, boolean filterConditions, Object conditionValue) {
@@ -470,6 +471,9 @@ public class PCGFactory {
 		pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		pcgEdge.tag(XCSG.Edge);
 		pcgEdge.tag(PCGEdge.EventFlow_Edge);
+		
+		pcg.edges().add(pcgEdge);
+
 		return pcgEdge;
 	}
 	
