@@ -25,7 +25,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.part.ViewPart;
 
-import com.ensoftcorp.atlas.core.markup.Markup;
+import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
@@ -467,7 +467,7 @@ public class PCGLogView extends ViewPart {
 			givenName = "";
 		}
 		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
-		Markup markup = PCGHighlighter.getPCGMarkup(pcg.getEvents());
+		IMarkup markup = PCGHighlighter.getPCGMarkup(pcg.getEvents());
 		pcg.updateLastAccessTime();
 		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}

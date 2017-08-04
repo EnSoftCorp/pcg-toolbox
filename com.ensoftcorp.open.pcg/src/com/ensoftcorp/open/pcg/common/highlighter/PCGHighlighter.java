@@ -2,8 +2,12 @@ package com.ensoftcorp.open.pcg.common.highlighter;
 
 import java.awt.Color;
 
+import com.ensoftcorp.atlas.core.db.graph.Edge;
+import com.ensoftcorp.atlas.core.db.graph.GraphElement;
+import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.markup.MarkupProperty;
+import com.ensoftcorp.atlas.core.markup.PropertySet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
@@ -20,11 +24,26 @@ public class PCGHighlighter {
 	public static final Color pcgEvent = java.awt.Color.CYAN;
 	public static final Color ipcgMaster = java.awt.Color.GRAY;
 	
-	public static Markup getPCGMarkup(Q events) {
-		Markup m = new Markup();
+	public static IMarkup getPCGMarkup(Q events) {
+		
+		// labels for conditionValue
+		Markup m2 = new Markup() {
+			
+			@Override
+			public PropertySet get(GraphElement element) {
+				if (element instanceof Edge) {
+					if (element.taggedWith(PCGEdge.EventFlow_Edge) && element.hasAttr(XCSG.conditionValue)) {
+						return new PropertySet().set(MarkupProperty.LABEL_TEXT, ""+element.getAttr(XCSG.conditionValue)); //$NON-NLS-1$
+					}
+				}
+				return null;
+			}
+		};
+
+		Markup m = new Markup(m2);
 
 		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge);
+		Q cfEdge = Query.universe().edges(PCGEdge.EventFlow_Edge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges
@@ -37,10 +56,11 @@ public class PCGHighlighter {
 		// color events (this should override previous settings)
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
 		
+		
 		return m;
 	}
 	
-	public static Markup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
+	public static IMarkup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Markup m = new Markup();
 
