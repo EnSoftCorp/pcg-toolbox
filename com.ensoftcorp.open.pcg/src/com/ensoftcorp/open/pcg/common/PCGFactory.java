@@ -175,7 +175,7 @@ public class PCGFactory {
 					addresses.put(ge.getAddress(), ge);
 					return edge;
 				} else {
-					throw new RuntimeException("Unknown sandbox graph element type.");
+					throw new RuntimeException("Unknown sandbox graph element type."); //$NON-NLS-1$
 				}
 			} else {
 				GraphElement age = CommonQueries.getGraphElementByAddress(ge.getAddress());
@@ -390,55 +390,90 @@ public class PCGFactory {
 		// FIXME do not create anything until we know what the final state should be - how would removeDouble figure out which one is redundant anyway?
 		
 		SandboxNode predecessor = inEdge.from();
-		for(SandboxNode successor : successors) {
+		for (SandboxNode successor : successors) {
 			this.getOrCreatePCGEdge(predecessor, successor, 
 					inEdge.getAttr(XCSG.conditionValue));
 		}
-		
-		// duplicate edges maybe be formed at the predecessor because of
-		// consuming the current node, so merge if needed
-		this.removeDuplicateEdges(predecessor);
+		// merge (boolean) edges
+		this.mergeEdges(predecessor);
 	}
 	
 	/**
-	 * remove duplicate successor edges
+	 * Merge conditional edges.
+	 * 
+	 * For 'if' and 'loop' conditions, the boolean successor edges
+	 * are merged when both 'true' and 'false' are present.
 	 * @param node
 	 */
-	private void removeDuplicateEdges(SandboxNode node){
+	private void mergeEdges(SandboxNode node){
 		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
-		if(outEdges.size() < 2){
+		if (outEdges.size() < 2){
 			return;
 		}
 		
+		// group out edges by successor
 		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
-		for(SandboxEdge outEdge : outEdges){
+		for (SandboxEdge outEdge : outEdges) {
 			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
 			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
-			if(nodeEdgeMap.containsKey(successor)){
+			if (nodeEdgeMap.containsKey(successor)) {
 				edges = nodeEdgeMap.get(successor);
 			}
 			edges.add(outEdge);
 			nodeEdgeMap.put(successor, edges);
 		}
 		
-		for(SandboxNode successor : nodeEdgeMap.keySet()){
+		for (SandboxNode successor : nodeEdgeMap.keySet()) {
 			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
-			if(successorEdges.size() > 1){
-				
-				if (node.taggedWith(XCSG.ControlFlowIfCondition)) {
-					// assert: merging true and false
+			// successors with in degree > 1 
+			if (successorEdges.size() > 1){
+				if (node.taggedWith(XCSG.ControlFlowIfCondition) 
+						|| node.taggedWith(XCSG.ControlFlowLoopCondition)) {
+					
+					// assert: merging a single true and false
+					Set<Object> cvs = assertConditionValues(successorEdges);
+					cvs.remove(Boolean.TRUE);
+					cvs.remove(Boolean.FALSE);
+					if (!cvs.isEmpty()) {
+						throw new IllegalStateException("Merging boolean conditional PCG edges, expected exactly one true and one false.  Node: " + node); //$NON-NLS-1$
+					}
+
 					this.getOrCreatePCGEdge(node, successor, null);
 					pcg.edges().removeAll(successorEdges);
 					
 				} else if (node.taggedWith(XCSG.ControlFlowSwitchCondition)) {
-					// do not merge switch out edges
-					
+					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
+					assertConditionValues(successorEdges);
+					// unlike the boolean edges, do not merge
 				} else {
-					throw new RuntimeException("Unhandled type of condition"); //$NON-NLS-1$
+					// unexpected 
+					throw new RuntimeException("Unhandled case for merging duplicate edges at node: " + node); //$NON-NLS-1$
 				}
 				
 			}
 		}
+	}
+
+	/**
+	 * Sanity check conditionValues 
+	 * @param successorEdges
+	 * @return
+	 * @throws IllegalStateException if conditionValue is not present, null, or if each value is not unique per edge
+	 */
+	private Set<Object> assertConditionValues(SandboxHashSet<SandboxEdge> successorEdges) {
+		Set<Object> conditionValues = new HashSet<>();
+		for (SandboxEdge successorEdge : successorEdges) {
+			Object cv = successorEdge.getAttr(XCSG.conditionValue);
+			if (cv == null) {
+				new IllegalStateException("Expected XCSG.conditionValue on edge: " + successorEdge); //$NON-NLS-1$
+			}
+			boolean added = conditionValues.add(cv);
+			if (!added) {
+				// collision in values is not expected
+				new IllegalStateException("Expected XCSG.conditionValue to be unique across edges, value=" + cv); //$NON-NLS-1$
+			}
+		}
+		return conditionValues;
 	}
 	
 	/**
