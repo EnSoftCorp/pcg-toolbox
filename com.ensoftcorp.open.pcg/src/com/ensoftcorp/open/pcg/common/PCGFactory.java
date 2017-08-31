@@ -386,9 +386,6 @@ public class PCGFactory {
 	 * @param successors
 	 */
 	private void connectToSuccessors(SandboxEdge inEdge, Set<SandboxNode> successors) {
-		
-		// FIXME do not create anything until we know what the final state should be - how would removeDouble figure out which one is redundant anyway?
-		
 		SandboxNode predecessor = inEdge.from();
 		for (SandboxNode successor : successors) {
 			this.getOrCreatePCGEdge(predecessor, successor, 
@@ -430,13 +427,14 @@ public class PCGFactory {
 				if (node.taggedWith(XCSG.ControlFlowIfCondition) 
 						|| node.taggedWith(XCSG.ControlFlowLoopCondition)) {
 					
-					// assert: merging a single true and false
-					Set<Object> cvs = assertConditionValues(successorEdges);
-					cvs.remove(Boolean.TRUE);
-					cvs.remove(Boolean.FALSE);
-					if (!cvs.isEmpty()) {
-						throw new IllegalStateException("Merging boolean conditional PCG edges, expected exactly one true and one false.  Node: " + node); //$NON-NLS-1$
-					}
+					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
+					/* NOTE: because nodes are consumed in no particular order, it is possible to
+					 * encounter a merge of an unconditional edge with true or false edge, indicating
+					 * that the paths are partially merged already.
+					 * This should imply that the node is not an event, and all paths will be merged
+					 * eventually.
+					 */
+					assertConditionValues(successorEdges);
 
 					this.getOrCreatePCGEdge(node, successor, null);
 					pcg.edges().removeAll(successorEdges);
