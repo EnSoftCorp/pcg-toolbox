@@ -21,6 +21,10 @@ If you want to install from source for bleeding edge changes, first grab a copy 
 ## Changelog
 Note that version numbers are based off [Atlas](http://www.ensoftcorp.com/atlas/download/) version numbers.
 
+### 3.1.6
+- Bug fixes for sandboxing that were causing correctness and performance issues
+- Released PCG Builder (for inter-procedural PCGs) and PCG Log user interfaces
+
 ### 3.1.0
 - PCGs are now computed in a sandbox to prevent spurious edges when computing multiple PCGs in the same control flow graph
 - PCGs can optionally be serialized in the Atlas graph and viewed with the PCG Log View
