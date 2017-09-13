@@ -23,6 +23,7 @@ Note that version numbers are based off [Atlas](http://www.ensoftcorp.com/atlas/
 
 ### 3.1.7
 - Bug fix for rare correctness issue due to a regression in sandboxing
+- Embedded javadoc with plugin
 
 ### 3.1.6
 - Bug fixes for sandboxing that were causing correctness and performance issues
