@@ -431,12 +431,18 @@ public class PCGFactory {
 					/* NOTE: because nodes are consumed in no particular order, it is possible to
 					 * encounter a merge of an unconditional edge with true or false edge, indicating
 					 * that the paths are partially merged already.
-					 * This should imply that the node is not an event, and all paths will be merged
+					 * This should imply that the successor is not an event, and all paths to it will be merged
 					 * eventually.
+					 * This also means that the merged edge should not be removed along with the others,
+					 * in the case that two unconditional edges are being merged.  This can happen as a result of 
+					 * merging deeply nested branches (depth 3 is sufficient). 
 					 */
 					assertConditionValues(successorEdges);
 
-					this.getOrCreatePCGEdge(node, successor, null);
+					SandboxEdge mergedEdge = this.getOrCreatePCGEdge(node, successor, null);
+					
+					// remove the edges which have been replaced (but not the one representing the merged paths) 
+					successorEdges.remove(mergedEdge);
 					pcg.edges().removeAll(successorEdges);
 					
 				} else if (node.taggedWith(XCSG.ControlFlowSwitchCondition)) {
