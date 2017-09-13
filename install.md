@@ -21,6 +21,9 @@ If you want to install from source for bleeding edge changes, first grab a copy 
 ## Changelog
 Note that version numbers are based off [Atlas](http://www.ensoftcorp.com/atlas/download/) version numbers.
 
+### 3.1.7
+- Bug fix for rare correctness issue due to a regression in sandboxing
+
 ### 3.1.6
 - Bug fixes for sandboxing that were causing correctness and performance issues
 - Released PCG Builder (for inter-procedural PCGs) and PCG Log user interfaces
