@@ -50,6 +50,7 @@ SOFTWARE.
 
    <requires>
       <import plugin="com.ensoftcorp.open.commons" version="3.1.7" match="greaterOrEqual"/>
+      <import plugin="org.json.simple"/>
    </requires>
 
    <plugin
