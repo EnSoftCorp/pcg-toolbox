@@ -48,13 +48,23 @@ SOFTWARE.
          id="com.ensoftcorp.open.commons.feature"
          version="0.0.0"/>
 
+   <includes
+         id="org.json.simple.feature"
+         version="0.0.0"/>
+
    <requires>
       <import plugin="com.ensoftcorp.open.commons" version="3.1.7" match="greaterOrEqual"/>
-      <import plugin="org.json.simple"/>
    </requires>
 
    <plugin
          id="com.ensoftcorp.open.pcg"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.json.simple"
          download-size="0"
          install-size="0"
          version="0.0.0"
