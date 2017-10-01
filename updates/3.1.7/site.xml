@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.ensoftcorp.open.pcg.feature_3.1.7.201709131053.jar" id="com.ensoftcorp.open.pcg.feature" version="3.1.7.201709131053">
+   <feature url="features/com.ensoftcorp.open.pcg.feature_3.1.7.201710011354.jar" id="com.ensoftcorp.open.pcg.feature" version="3.1.7.201710011354">
       <category name="com.ensoftcorp.open.pcg.category"/>
    </feature>
    <category-def name="com.ensoftcorp.open.pcg.category" label="PCG Toolbox">
