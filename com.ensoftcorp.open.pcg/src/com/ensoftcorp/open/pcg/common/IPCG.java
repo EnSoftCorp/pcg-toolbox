@@ -87,6 +87,7 @@ public class IPCG {
 	
 	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions, boolean exceptionalControlFlow){
 		events = events.nodes(XCSG.ControlFlow_Node);
+		selectedAncestors = selectedAncestors.intersection(getAncestorFunctions(events));
 		Q eventFunctions = getFunctionsContainingEvents(events);
 		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, selectedAncestors);
 		Q ipcgFunctions = ipcgCallGraph.retainNodes();
@@ -101,6 +102,10 @@ public class IPCG {
 		Q expandedFunctions = eventFunctions.union(selectedExpansions);
 		for(Node expandedFunction : expandedFunctions.eval().nodes()){
 			Q expandedFunctionControlFlowNodes = Common.toQ(expandedFunction).contained().nodes(XCSG.ControlFlow_Node);
+			if(expandedFunctionControlFlowNodes.eval().nodes().isEmpty()){
+				Log.warning("Function has no CFG body.");
+				continue;
+			}
 			AtlasSet<Node> expandedFunctionEvents = new AtlasHashSet<Node>();
 			expandedFunctionEvents.addAll(expandedFunctionControlFlowNodes.intersection(events).eval().nodes());
 			Q expandedFunctionCallsitesCF = Common.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
@@ -140,9 +145,13 @@ public class IPCG {
 						} else {
 							// taget is an expanded function, we create an edge to the function's pcg master entry
 							try {
-								Node masterEntry = pcgs.get(expandedFunctionCallsiteCallGraphRestrictedTarget).getMasterEntry();
-								Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, masterEntry);
-								ipcgEdges.add(ipcgEdge);
+								if(pcgs.containsKey(expandedFunctionCallsiteCallGraphRestrictedTarget)){
+									Node masterEntry = pcgs.get(expandedFunctionCallsiteCallGraphRestrictedTarget).getMasterEntry();
+									Edge ipcgEdge = getOrCreateIPCGEdge(expandedFunctionCallsiteCF, masterEntry);
+									ipcgEdges.add(ipcgEdge);
+								} else {
+									Log.warning("PCG for function " + CommonQueries.getQualifiedFunctionName(expandedFunctionCallsiteCallGraphRestrictedTarget) + " was not computed. IPCG will be incomplete.");
+								}
 							} catch (IllegalArgumentException e){
 								Log.error("Error creating IPCG edge", e);
 							}
