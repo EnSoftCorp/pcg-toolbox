@@ -103,7 +103,7 @@ public class IPCG {
 		for(Node expandedFunction : expandedFunctions.eval().nodes()){
 			Q expandedFunctionControlFlowNodes = Common.toQ(expandedFunction).contained().nodes(XCSG.ControlFlow_Node);
 			if(expandedFunctionControlFlowNodes.eval().nodes().isEmpty()){
-				Log.warning("Function has no CFG body.");
+				Log.warning("Function " + CommonQueries.getQualifiedFunctionName(expandedFunction) + " has no CFG body.");
 				continue;
 			}
 			AtlasSet<Node> expandedFunctionEvents = new AtlasHashSet<Node>();
