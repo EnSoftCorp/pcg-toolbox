@@ -27,9 +27,11 @@ import org.eclipse.ui.part.ViewPart;
 
 import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
+import com.ensoftcorp.open.commons.log.Log;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
-import com.ensoftcorp.open.pcg.common.PCG;
+import com.ensoftcorp.open.pcg.common.SerializablePCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class PCGLogView extends ViewPart {
 
@@ -48,11 +50,11 @@ public class PCGLogView extends ViewPart {
 	
 	// default sort descending by last accessed time
 	private boolean sortAscending = false;
-	private Comparator<PCG> tableSorter = new CreationComparator();
+	private Comparator<SerializablePCG> tableSorter = new CreationComparator();
 	
-	private static class LastAccessedComparator implements Comparator<PCG> {
+	private static class LastAccessedComparator implements Comparator<SerializablePCG> {
 		@Override
-		public int compare(PCG pcg1, PCG pcg2) {
+		public int compare(SerializablePCG pcg1, SerializablePCG pcg2) {
 			long pcg1LastAccessTime;
 			try {
 				pcg1LastAccessTime = pcg1.getLastAccessTime();
@@ -71,9 +73,9 @@ public class PCGLogView extends ViewPart {
 		}
 	};
 	
-	private static class CreationComparator implements Comparator<PCG> {
+	private static class CreationComparator implements Comparator<SerializablePCG> {
 		@Override
-		public int compare(PCG pcg1, PCG pcg2) {
+		public int compare(SerializablePCG pcg1, SerializablePCG pcg2) {
 			long pcg1CreationTime;
 			try {
 				pcg1CreationTime = pcg1.getCreationTime();
@@ -92,20 +94,20 @@ public class PCGLogView extends ViewPart {
 		}
 	};
 	
-	private static class GivenNameComparator implements Comparator<PCG> {
+	private static class GivenNameComparator implements Comparator<SerializablePCG> {
 		@Override
-		public int compare(PCG pcg1, PCG pcg2) {
+		public int compare(SerializablePCG pcg1, SerializablePCG pcg2) {
 			
 			String pcg1GivenName;
 			try {
-				pcg1GivenName = pcg1.getGivenName();
+				pcg1GivenName = pcg1.getName();
 			} catch (Exception e){
 				pcg1GivenName = "";
 			}
 			
 			String pcg2GivenName;
 			try {
-				pcg2GivenName = pcg2.getGivenName();
+				pcg2GivenName = pcg2.getName();
 			} catch (Exception e){
 				pcg2GivenName = "";
 			}
@@ -114,9 +116,9 @@ public class PCGLogView extends ViewPart {
 		}
 	};
 	
-	private static class FunctionNameComparator implements Comparator<PCG> {
+	private static class FunctionNameComparator implements Comparator<SerializablePCG> {
 		@Override
-		public int compare(PCG pcg1, PCG pcg2) {
+		public int compare(SerializablePCG pcg1, SerializablePCG pcg2) {
 			String pcg1QualifiedFunctionName;
 			try {
 				pcg1QualifiedFunctionName = CommonQueries.getQualifiedFunctionName(pcg1.getFunction());
@@ -135,9 +137,9 @@ public class PCGLogView extends ViewPart {
 		}
 	};
 	
-	private static class NumberEventsComparator implements Comparator<PCG> {
+	private static class NumberEventsComparator implements Comparator<SerializablePCG> {
 		@Override
-		public int compare(PCG pcg1, PCG pcg2) {
+		public int compare(SerializablePCG pcg1, SerializablePCG pcg2) {
 			long pcg1Events;
 			try {
 				pcg1Events = pcg1.getEvents().eval().nodes().size();
@@ -173,20 +175,26 @@ public class PCGLogView extends ViewPart {
 			table.removeAll();
 			
 			// get and sort the pcg instances by the currently selected table sorter
-			ArrayList<PCG> pcgs = new ArrayList<PCG>(PCG.loadAll());
+			ArrayList<SerializablePCG> pcgs;
+			try {
+				pcgs = new ArrayList<SerializablePCG>(SerializablePCG.loadAll());
+			} catch (Exception e){
+				Log.warning("Unable to load PCGs", e);
+				return;
+			}
 			if(sortAscending){
 				pcgs.sort(tableSorter);
 			} else {
 				pcgs.sort(tableSorter.reversed());
 			}
 
-	        for (PCG pcg : pcgs) {
+	        for (SerializablePCG pcg : pcgs) {
 	        	TableItem item = new TableItem(table, SWT.NONE);
 	        	item.setData(PCG_DATA, pcg);
 	        	
 	        	// set given name
 	        	try {
-					item.setText(0, pcg.getGivenName());
+					item.setText(0, pcg.getName());
 				} catch (Exception e){
 					item.setBackground(0, Display.getDefault().getSystemColor(SWT.COLOR_RED));
 					item.setText(0, "Error");
@@ -260,7 +268,7 @@ public class PCGLogView extends ViewPart {
 				try {
 					if(table.getSelectionCount() == 1){
 						TableItem selection = table.getSelection()[0];
-						PCG pcg = (PCG) selection.getData(PCG_DATA);
+						SerializablePCG pcg = (SerializablePCG) selection.getData(PCG_DATA);
 						showPCG(pcg);
 						updateTable();
 					} else {
@@ -280,8 +288,8 @@ public class PCGLogView extends ViewPart {
 			public void widgetSelected(SelectionEvent e) {
 				try {
 					TableItem selection = table.getSelection()[0];
-					PCG pcg = (PCG) selection.getData(PCG_DATA);
-					PCG.delete(pcg);
+					SerializablePCG pcg = (SerializablePCG) selection.getData(PCG_DATA);
+					SerializablePCG.delete(pcg);
 					updateTable();
 				} catch (Exception ex){
 					DisplayUtils.showError(ex, "Error deleting PCG.");
@@ -413,8 +421,9 @@ public class PCGLogView extends ViewPart {
 												String givenName = text.getText();
 												item.setText(column, givenName);
 												try {
-													PCG pcg = (PCG) item.getData(PCG_DATA);
-													pcg.setGivenName(givenName);
+													SerializablePCG pcg = (SerializablePCG) item.getData(PCG_DATA);
+													pcg.setName(givenName);
+													SerializablePCG.save(pcg);
 													// don't need to update the table, it would look the same here
 												} catch (Exception ex){
 													DisplayUtils.showError(ex, "Error setting given name.");
@@ -439,7 +448,7 @@ public class PCGLogView extends ViewPart {
 								// double click was on a different column
 								// just show the PCG
 								try {
-									PCG pcg = (PCG) item.getData(PCG_DATA);
+									SerializablePCG pcg = (SerializablePCG) item.getData(PCG_DATA);
 									showPCG(pcg);
 									updateTable();
 								} catch (Exception ex){
@@ -461,14 +470,19 @@ public class PCGLogView extends ViewPart {
 		});
 	}
 	
-	private static void showPCG(PCG pcg) {
-		String givenName = pcg.getGivenName();
+	private static void showPCG(SerializablePCG pcg) {
+		String givenName = pcg.getName();
 		if(givenName == null){
 			givenName = "";
 		}
 		String title = givenName.equals("") ? CommonQueries.getQualifiedFunctionName(pcg.getFunction()) : givenName;
 		IMarkup markup = PCGHighlighter.getPCGMarkup(pcg.getEvents());
-		pcg.updateLastAccessTime();
+		try {
+			pcg.updateLastAccessTime();
+			SerializablePCG.save(pcg);
+		} catch (Exception e) {
+			Log.warning("Unable to update PCG access time.", e);
+		}
 		DisplayUtils.show(pcg.getPCG(), markup, true, title);
 	}
 	

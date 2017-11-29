@@ -13,6 +13,7 @@ import com.ensoftcorp.atlas.core.db.graph.GraphElement.NodeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
+import com.ensoftcorp.atlas.core.log.Log;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
@@ -27,7 +28,7 @@ import com.ensoftcorp.open.commons.sandbox.SandboxGraph;
 import com.ensoftcorp.open.commons.sandbox.SandboxGraphElement;
 import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
-import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
+import com.ensoftcorp.open.pcg.common.SerializablePCG.NormalizationException;
 import com.ensoftcorp.open.pcg.preferences.PCGPreferences;
 
 /**
@@ -91,11 +92,20 @@ public class PCGFactory {
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
-		PCG pcg = PCG.load(ucfg, events.eval().nodes());
-		if(pcg != null){
-			return pcg;
+		if(PCGPreferences.isSerializePCGInstancesEnabled()){
+			try {
+				PCG pcg = SerializablePCG.load(ucfg, events.eval().nodes());
+				if(pcg != null){
+					return pcg;
+				} else {
+					// PCG does not exist or could not be found, compute the PCG now
+					return new PCGFactory(ucfg, events.eval().nodes()).createPCG();
+				}
+			} catch (Exception e){
+				throw new RuntimeException(e);
+			}
 		} else {
-			// PCG does not exist or could not be found, compute the PCG now
+			// just create pcg fresh
 			return new PCGFactory(ucfg, events.eval().nodes()).createPCG();
 		}
 	}
@@ -111,8 +121,8 @@ public class PCGFactory {
 	
 	/** Sandbox universe.
 	 *  Initialized to CFG, transformed to the PCG
-	 *  Nodes: ControlFlow_Edge, EventFlow_Edge 
-	 *  Edges: ControlFlow_Node, EventFlow_Master_Entry, EventFlow_Master_Exit */
+	 *  Nodes: ControlFlow_Edge, PCG_Edge 
+	 *  Edges: ControlFlow_Node, PCG_Master_Entry, PCG_Master_Exit */
 	private SandboxGraph pcg;
 	
 	private static class PCGFlushProvider extends DefaultFlushProvider {
@@ -121,7 +131,7 @@ public class PCGFactory {
 		 * the Atlas graph and updates the address map accordingly.
 		 * 
 		 * This implementation differs from the default implementation by
-		 * attempting to re-use EventFlow edges that already exist between the
+		 * attempting to re-use PCG edges that already exist between the
 		 * two given nodes if the sandbox created a new edge between the two
 		 * edges.
 		 * 
@@ -152,7 +162,7 @@ public class PCGFactory {
 					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
 					
 					Edge edge = null;
-					if(sandboxEdge.tags().contains(PCGEdge.EventFlow_Edge)){
+					if(sandboxEdge.tags().contains(PCG.PCGEdge.PCG_Edge)){
 						// only create event flow edges between nodes if one does not already exist
 						edge = findPCGEdge(sandboxEdge, from, to);
 						if (edge == null) {
@@ -180,7 +190,7 @@ public class PCGFactory {
 			} else {
 				GraphElement age = CommonQueries.getGraphElementByAddress(ge.getAddress());
 				
-				// purge all old tags
+				// purge all PCG tags
 				Set<String> tagsToRemove = new HashSet<String>();
 				for(String tag : age.tags()){
 					tagsToRemove.add(tag);
@@ -194,7 +204,7 @@ public class PCGFactory {
 					age.tag(tag);
 				}
 				
-				// purge all old attributes
+				// purge all PCG attributes
 				Set<String> keysToRemove = new HashSet<String>();
 				for(String key : age.attr().keys()){
 					keysToRemove.add(key);
@@ -214,7 +224,7 @@ public class PCGFactory {
 
 		/** find a compatible PCG Edge with respect to adjacent nodes and XCSG.conditionValue */
 		private Edge findPCGEdge(SandboxEdge sandboxEdge, Node from, Node to) {
-			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.EventFlow_Edge);
+			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCG.PCGEdge.PCG_Edge);
 			AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
 			boolean hasAttr = sandboxEdge.hasAttr(XCSG.conditionValue);
 			Object cv = sandboxEdge.getAttr(XCSG.conditionValue);
@@ -300,14 +310,14 @@ public class PCGFactory {
 		
 		
 		// tag the entry and exit nodes
-		masterEntry.tag(PCG.PCGNode.EventFlow_Master_Entry);
-		masterExit.tag(PCG.PCGNode.EventFlow_Master_Exit);
+		masterEntry.tag(PCG.PCGNode.PCG_Master_Entry);
+		masterExit.tag(PCG.PCGNode.PCG_Master_Exit);
 		
 		// tag each edge as an event flow edge
 		// this gets an edges from the master entry to the roots
 		// and from the exits to the master exit
 		for(SandboxEdge edge : pcg.edges()){
-			edge.tag(PCG.PCGEdge.EventFlow_Edge);
+			edge.tag(PCG.PCGEdge.PCG_Edge);
 		}		
 
 		// as a final sanity check - we could check that nodes should only be included 
@@ -317,11 +327,21 @@ public class PCGFactory {
 		
 		// flush the result and construct the PCG object
 		Graph atlasPCG = sandbox.flush(pcg);
-		PCG result = new PCG(atlasPCG, atlasUCFG, atlasEvents);
+		PCG result = new RawPCG(atlasPCG, atlasUCFG, atlasEvents);
 		
-		// save the pcg instance parameters to the master entry node EventFlow_Instances attribute
 		if(PCGPreferences.isSerializePCGInstancesEnabled()){
-			PCG.save(result);
+			try {
+				result = new SerializablePCG(atlasPCG, atlasUCFG, atlasEvents);
+				SerializablePCG.save((SerializablePCG) result); 
+			} catch (NormalizationException ne) {
+				// log error and return raw pcg
+				Log.error("Graph elements were not normalized, PCG will not be serializable.", ne);
+			} catch (Exception e){
+				// log error and return raw pcg
+				Log.error("Unable to save PCG", e);
+			}
+		} else {
+			result = new RawPCG(atlasPCG, atlasUCFG, atlasEvents);
 		}
 		
 		return result;
@@ -543,7 +563,7 @@ public class PCGFactory {
 		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(PCGEdge.EventFlow_Edge);
+		pcgEdge.tag(PCG.PCGEdge.PCG_Edge);
 		if (conditionValue!=null)
 			pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		
