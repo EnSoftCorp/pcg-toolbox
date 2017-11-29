@@ -21,6 +21,10 @@ If you want to install from source for bleeding edge changes, first grab a copy 
 ## Changelog
 Note that version numbers are based off [Atlas](http://www.ensoftcorp.com/atlas/download/) version numbers.
 
+### 3.3.0
+- Bug fixes
+- Added support for switch statements
+
 ### 3.1.7
 - Bug fix for rare correctness issue due to a regression in sandboxing
 - Embedded javadoc with plugin
