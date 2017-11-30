@@ -50,18 +50,16 @@ import com.ensoftcorp.atlas.ui.selection.SelectionUtil;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.utilities.DisplayUtils;
+import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerView;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
-public class PCGBuilderView extends ViewPart {
+public class PCGBuilderView extends GraphSelectionListenerView {
 
 	/**
 	 * The ID of the view as specified by the extension.
 	 */
 	public static final String ID = "com.ensoftcorp.open.pcg.ui.pcgBuilderView";
-	
-	// the current Atlas selection
-	private AtlasSet<Node> selection = new AtlasHashSet<Node>();
 
 	private static Map<String,PCGComponents> pcgs = new HashMap<String,PCGComponents>();
 	private static PCGBuilderView VIEW;
@@ -296,20 +294,8 @@ public class PCGBuilderView extends ViewPart {
 		addPCGAction.setHoverImageDescriptor(newConfigurationIcon);
 		getViewSite().getActionBars().getToolBarManager().add(addPCGAction);
 		
-		// setup the Atlas selection event listener
-		IAtlasSelectionListener selectionListener = new IAtlasSelectionListener(){
-			@Override
-			public void selectionChanged(IAtlasSelectionEvent atlasSelection) {
-				try {
-					selection = atlasSelection.getSelection().eval().nodes();
-				} catch (Exception e){
-					selection = new AtlasHashSet<Node>();
-				}
-			}				
-		};
-		
-		// add the selection listener
-		SelectionUtil.addSelectionListener(selectionListener);
+		// add the selection event handlers
+		this.registerGraphHandlers();
 	}
 
 	private void addPCG(final CTabFolder pcgFolder, final PCGComponents pcg) {
@@ -452,6 +438,7 @@ public class PCGBuilderView extends ViewPart {
 		addControlFlowEventsButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
+				AtlasSet<Node> selection = getSelection().eval().nodes();
 				if(selection.isEmpty()){
 					DisplayUtils.showError("Nothing is selected.");
 				} else {
@@ -723,6 +710,7 @@ public class PCGBuilderView extends ViewPart {
 	}
 	
 	private AtlasSet<Node> getFilteredSelections(String... tags){
+		AtlasSet<Node> selection = getSelection().eval().nodes();
 		AtlasSet<Node> currentSelection = new AtlasHashSet<Node>(selection);
 		AtlasSet<Node> result = new AtlasHashSet<Node>();
 		for(Node node : currentSelection){
@@ -737,7 +725,15 @@ public class PCGBuilderView extends ViewPart {
 	}
 
 	@Override
-	public void setFocus() {
-		// intentionally left blank
-	}
+	public void setFocus() {}
+
+	@Override
+	public void selectionChanged(Graph selection) {}
+
+	@Override
+	public void indexBecameUnaccessible() {}
+
+	@Override
+	public void indexBecameAccessible() {}
+	
 }
