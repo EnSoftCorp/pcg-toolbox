@@ -19,6 +19,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
+import com.ensoftcorp.open.commons.log.Log;
 import com.ensoftcorp.open.commons.preferences.CommonsPreferences;
 import com.ensoftcorp.open.commons.sandbox.DefaultFlushProvider;
 import com.ensoftcorp.open.commons.sandbox.Sandbox;
@@ -77,6 +78,20 @@ public class PCGFactory {
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
+		if(CommonQueries.isEmpty(cfg)){
+			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
+		}
+		// a lovely rare corner case here, a void method can have a loop
+		// with no termination conditions that forms a strongly connected
+		// component, so root -> ... SCC, since the SCC will not have any
+		// leaves could be empty. In order to deal with this we remove the
+		// back edges to make the cfg leaves explicit
+		if(CommonQueries.isEmpty(cfExits)){
+			cfExits = cfg.differenceEdges(cfg.edges(XCSG.ControlFlowBackEdge)).leaves();
+			if(CommonQueries.isEmpty(cfExits)){
+				throw new RuntimeException("Control flow graph has no exits.");
+			}
+		}
 		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
 		return create(ucfg, events);
 	}
