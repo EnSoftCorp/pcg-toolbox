@@ -80,17 +80,25 @@ public class PCGFactory {
 		if(CommonQueries.isEmpty(cfg)){
 			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
 		}
+		
 		// a lovely rare corner case here, a void method can have a loop
 		// with no termination conditions that forms a strongly connected
 		// component, so root -> ... SCC, since the SCC will not have any
-		// leaves could be empty. In order to deal with this we remove the
-		// back edges to make the cfg leaves explicit
-		if(CommonQueries.isEmpty(cfExits)){
-			cfExits = cfg.differenceEdges(cfg.edges(XCSG.ControlFlowBackEdge)).leaves();
-			if(CommonQueries.isEmpty(cfExits)){
-				throw new RuntimeException("Control flow graph has no exits.");
+		// leaves could be empty. This is due to Jimple's dead code 
+		// elimination packs that remove the unreached return statement. 
+		// In this case the loop header(s) is implicitly the exit even
+		// though the loop is non-terminating. 
+		AtlasSet<Node> nonTerminatingLoops = new AtlasHashSet<Node>();
+		for(Node loop : cfg.nodes(XCSG.Loop).eval().nodes()){
+			if(CommonQueries.isEmpty(cfg.forward(Common.toQ(loop).difference(cfg.between(Common.toQ(loop), Common.toQ(loop)))))){
+				nonTerminatingLoops.add(loop);
 			}
 		}
+		cfExits = cfExits.union(Common.toQ(nonTerminatingLoops));
+		if(CommonQueries.isEmpty(cfExits)){
+			throw new RuntimeException("Control flow graph has no exits.");
+		}
+		
 		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
 		return create(ucfg, events);
 	}
