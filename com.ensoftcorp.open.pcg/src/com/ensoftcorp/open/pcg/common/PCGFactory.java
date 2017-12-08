@@ -81,50 +81,70 @@ public class PCGFactory {
 			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
 		}
 		
-		// a fun corner case is that the control flow root could be sucked up 
-		// in an SCC due to the root being a loop header. In this case the
-		// outermost loop (according to loop children) of the SCC is the control 
-		// flow root.
-		if(CommonQueries.isEmpty(cfRoots)){
-			// we should be able to trust the Atlas tags here...
-			cfRoots = cfg.nodes(XCSG.controlFlowRoot);
-			if(CommonQueries.isEmpty(cfRoots)){
-				throw new IllegalArgumentException("Control flow root must not be empty");
-			}
-			
-			// alternatively
-//			AtlasSet<Node> outerLoops = Common.universe().edges(XCSG.LoopChild).reverse(cfg.nodes(XCSG.Loop)).roots().eval().nodes();
-//			ArrayList<Node> sortedOuterLoops = new ArrayList<Node>();
-//			for(Node outerLoop : outerLoops){
-//				sortedOuterLoops.add(outerLoop);
-//			}
-//			Collections.sort(sortedOuterLoops, new NodeSourceCorrespondenceSorter());
-//			if(sortedOuterLoops.isEmpty()){
+		// APPROACH 2 - A PCG is a compaction of a CFG. A CFG could be refined 
+		// by removing some infeasible edges. A PCG still has symbolic master  
+		// entry and exit nodes but there is no guarantee there is a path from 
+		// entry to exit. The collapsed CFG edges in the PCG are a reflection
+		// of the accuracy of the refined CFG.
+		
+		// for APPROACH 2 we just do nothing...we is the currently implemented
+		// approach, alternatively (APPROACH 1) we can restore the removed CFG
+		// edges by detecting the cases where SOOT refined the control flow
+		// that affected the master entry / exit nodes (which is because of loops)
+		boolean relaxNonEmptyRootsRequirement = true;
+		boolean relaxNonEmptyExitsRequirement = true;
+		
+		// APPROACH 1 - PCGs do not discuss feasibility questions and SOOT's
+		// Jimple prematurely answered that question violating our assumption
+		// that a path from master entry / exit exits (but may or may not be
+		// feasible).
+//		boolean relaxNonEmptyRootsRequirement = false;
+//		boolean relaxNonEmptyExitsRequirement = false;
+//
+//		// a fun corner case is that the control flow root could be sucked up 
+//		// in an SCC due to the root being a loop header. In this case the
+//		// outermost loop (according to loop children) of the SCC is the control 
+//		// flow root.
+//		if(CommonQueries.isEmpty(cfRoots)){
+//			// we should be able to trust the Atlas tags here...
+//			cfRoots = cfg.nodes(XCSG.controlFlowRoot);
+//			if(CommonQueries.isEmpty(cfRoots)){
 //				throw new IllegalArgumentException("Control flow root must not be empty");
-//			} else {
-//				cfRoots = Common.toQ(sortedOuterLoops.get(0));
 //			}
-		}
+//			
+//			// alternatively
+////			AtlasSet<Node> outerLoops = Common.universe().edges(XCSG.LoopChild).reverse(cfg.nodes(XCSG.Loop)).roots().eval().nodes();
+////			ArrayList<Node> sortedOuterLoops = new ArrayList<Node>();
+////			for(Node outerLoop : outerLoops){
+////				sortedOuterLoops.add(outerLoop);
+////			}
+////			Collections.sort(sortedOuterLoops, new NodeSourceCorrespondenceSorter());
+////			if(sortedOuterLoops.isEmpty()){
+////				throw new IllegalArgumentException("Control flow root must not be empty");
+////			} else {
+////				cfRoots = Common.toQ(sortedOuterLoops.get(0));
+////			}
+//		}
+//		
+//		// another lovely rare corner case here, a void method can have a loop
+//		// with no termination conditions that forms a strongly connected
+//		// component, so root -> ... SCC, since the SCC will not have any
+//		// leaves could be empty. This is due to Jimple's dead code 
+//		// elimination packs that remove the unreached return statement. 
+//		// In this case the loop header(s) is implicitly the exit even
+//		// though the loop is non-terminating. 
+//		AtlasSet<Node> nonTerminatingLoops = new AtlasHashSet<Node>();
+//		for(Node loop : cfg.nodes(XCSG.Loop).eval().nodes()){
+//			if(CommonQueries.isEmpty(cfg.forward(Common.toQ(loop).difference(cfg.between(Common.toQ(loop), Common.toQ(loop)))))){
+//				nonTerminatingLoops.add(loop);
+//			}
+//		}
+//		cfExits = cfExits.union(Common.toQ(nonTerminatingLoops));
+//		if(CommonQueries.isEmpty(cfExits)){
+//			throw new RuntimeException("Control flow graph has no exits.");
+//		}
 		
-		// another lovely rare corner case here, a void method can have a loop
-		// with no termination conditions that forms a strongly connected
-		// component, so root -> ... SCC, since the SCC will not have any
-		// leaves could be empty. This is due to Jimple's dead code 
-		// elimination packs that remove the unreached return statement. 
-		// In this case the loop header(s) is implicitly the exit even
-		// though the loop is non-terminating. 
-		AtlasSet<Node> nonTerminatingLoops = new AtlasHashSet<Node>();
-		for(Node loop : cfg.nodes(XCSG.Loop).eval().nodes()){
-			if(CommonQueries.isEmpty(cfg.forward(Common.toQ(loop).difference(cfg.between(Common.toQ(loop), Common.toQ(loop)))))){
-				nonTerminatingLoops.add(loop);
-			}
-		}
-		cfExits = cfExits.union(Common.toQ(nonTerminatingLoops));
-		if(CommonQueries.isEmpty(cfExits)){
-			throw new RuntimeException("Control flow graph has no exits.");
-		}
-		
-		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), cfExits.eval().nodes(), CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
+		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), relaxNonEmptyRootsRequirement, cfExits.eval().nodes(), relaxNonEmptyExitsRequirement, CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
 		return create(ucfg, events);
 	}
 	
