@@ -81,7 +81,32 @@ public class PCGFactory {
 			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
 		}
 		
-		// a lovely rare corner case here, a void method can have a loop
+		// a fun corner case is that the control flow root could be sucked up 
+		// in an SCC due to the root being a loop header. In this case the
+		// outermost loop (according to loop children) of the SCC is the control 
+		// flow root.
+		if(CommonQueries.isEmpty(cfRoots)){
+			// we should be able to trust the Atlas tags here...
+			cfRoots = cfg.nodes(XCSG.controlFlowRoot);
+			if(CommonQueries.isEmpty(cfRoots)){
+				throw new IllegalArgumentException("Control flow root must not be empty");
+			}
+			
+			// alternatively
+//			AtlasSet<Node> outerLoops = Common.universe().edges(XCSG.LoopChild).reverse(cfg.nodes(XCSG.Loop)).roots().eval().nodes();
+//			ArrayList<Node> sortedOuterLoops = new ArrayList<Node>();
+//			for(Node outerLoop : outerLoops){
+//				sortedOuterLoops.add(outerLoop);
+//			}
+//			Collections.sort(sortedOuterLoops, new NodeSourceCorrespondenceSorter());
+//			if(sortedOuterLoops.isEmpty()){
+//				throw new IllegalArgumentException("Control flow root must not be empty");
+//			} else {
+//				cfRoots = Common.toQ(sortedOuterLoops.get(0));
+//			}
+		}
+		
+		// another lovely rare corner case here, a void method can have a loop
 		// with no termination conditions that forms a strongly connected
 		// component, so root -> ... SCC, since the SCC will not have any
 		// leaves could be empty. This is due to Jimple's dead code 
