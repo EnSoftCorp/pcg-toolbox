@@ -6,7 +6,8 @@ Bundle-Version: 3.3.0.qualifier
 Bundle-Activator: com.ensoftcorp.open.pcg.Activator
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Require-Bundle: com.ensoftcorp.open.commons;bundle-version="3.3.0",
- org.json.simple;bundle-version="1.1.0"
+ org.json.simple;bundle-version="1.1.0",
+ com.ensoftcorp.open.slice;bundle-version="3.3.0"
 Bundle-ActivationPolicy: lazy
 Bundle-Vendor: EnSoft Corp.
 Export-Package: com.ensoftcorp.open.pcg,

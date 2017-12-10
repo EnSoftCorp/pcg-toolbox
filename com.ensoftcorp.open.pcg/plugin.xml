@@ -54,6 +54,9 @@
       <script
             class="com.ensoftcorp.open.pcg.ui.smart.ExceptionalPCGSmartView">
       </script>
+      <script
+            class="com.ensoftcorp.open.pcg.ui.smart.PCGSliceSmartView">
+      </script>
    </extension>
 
 </plugin>
