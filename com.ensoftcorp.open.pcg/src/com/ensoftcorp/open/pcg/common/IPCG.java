@@ -119,7 +119,8 @@ public class IPCG {
 					}
 				}
 			}
-			PCG pcg = PCGFactory.create(Common.toQ(expandedFunctionEvents), exceptionalControlFlow, true);
+			Q cfg = exceptionalControlFlow ? CommonQueries.excfg(expandedFunction) : CommonQueries.cfg(expandedFunction);
+			PCG pcg = PCGFactory.create(cfg, Common.toQ(expandedFunctionEvents));
 			pcgs.put(pcg.getFunction(), pcg);
 		}
 		

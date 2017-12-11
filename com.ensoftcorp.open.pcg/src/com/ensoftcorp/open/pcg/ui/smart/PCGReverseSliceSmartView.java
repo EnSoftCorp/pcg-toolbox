@@ -1,16 +1,20 @@
 package com.ensoftcorp.open.pcg.ui.smart;
 
-import com.ensoftcorp.atlas.core.db.graph.Node;
-import com.ensoftcorp.atlas.core.db.set.AtlasSet;
+import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
+import com.ensoftcorp.atlas.core.script.FrontierStyledResult;
 import com.ensoftcorp.atlas.core.script.StyledResult;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
-import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
 import com.ensoftcorp.atlas.ui.scripts.selections.FilteringAtlasSmartViewScript;
+import com.ensoftcorp.atlas.ui.scripts.selections.IExplorableScript;
+import com.ensoftcorp.atlas.ui.scripts.selections.IResizableScript;
+import com.ensoftcorp.atlas.ui.scripts.util.SimpleScriptUtil;
+import com.ensoftcorp.atlas.ui.selection.event.FrontierEdgeExploreEvent;
 import com.ensoftcorp.atlas.ui.selection.event.IAtlasSelectionEvent;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.pcg.common.PCGFactory;
+import com.ensoftcorp.open.pcg.common.PCG;
+import com.ensoftcorp.open.pcg.common.PCGSlice;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
 /**
@@ -28,7 +32,7 @@ import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
  * RED   = false ControlFlow_Edges
  * CYAN  = events ControlFlow_Node
  */
-public class PCGSmartView extends FilteringAtlasSmartViewScript implements AtlasSmartViewScript{
+public class PCGReverseSliceSmartView extends FilteringAtlasSmartViewScript implements IResizableScript, IExplorableScript {
 
 	@Override
 	protected String[] getSupportedNodeTags() {
@@ -42,7 +46,7 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 
 	@Override
 	public String getTitle() {
-		return "Projected Control Graph (PCG)";
+		return "PCG Reverse Slice";
 	}
 
 	protected boolean inlcudeExceptionalControlFlow(){
@@ -50,9 +54,13 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 	}
 	
 	@Override
-	public StyledResult selectionChanged(IAtlasSelectionEvent event) {
+	public FrontierStyledResult explore(FrontierEdgeExploreEvent event, FrontierStyledResult oldResult) {
+		return SimpleScriptUtil.explore(this, event, oldResult);
+	}
+
+	@Override
+	public FrontierStyledResult evaluate(IAtlasSelectionEvent event, int reverse, int forward) {
 		ControlFlowSelection filteredCFSelection = ControlFlowSelection.processSelection(filter(event));
-		
 		Q events = filteredCFSelection.getSelectedControlFlow().union(filteredCFSelection.getImpliedControlFlow());
 		
 		// don't try to create a pcg if the selection is empty
@@ -61,19 +69,34 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		}
 		
 		// don't respond to inputs of events that span multiple functions
-		AtlasSet<Node> functions = CommonQueries.getContainingFunctions(events).eval().nodes();
-		if(functions.size() > 1){
+		if(CommonQueries.getContainingFunctions(events).eval().nodes().size() > 1){
 			return null;
 		}
+
+		PCG current = PCGSlice.getReversePCGSlice(events, reverse);
+
+		// compute what is on the frontier
+		PCG next = PCGSlice.getReversePCGSlice(events, (reverse+1));
+		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
+		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
+		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
+		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
 		
-		Node function = functions.one();
-		Q cfg = inlcudeExceptionalControlFlow() ? CommonQueries.excfg(function) : CommonQueries.cfg(function);
-		Q pcg = PCGFactory.create(cfg, events).getPCG();
+		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
+		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
 		
-		// need to union in the contains edges because they are not contained in the default index
-		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));
-		
-		return new StyledResult(pcg, PCGHighlighter.getPCGMarkup(events));
+		result.setInput(events);
+		return result;
+	}
+
+	@Override
+	public int getDefaultStepTop() {
+		return 1;
+	}
+	
+	@Override
+	public int getDefaultStepBottom() {
+		return 0;
 	}
 	
 	private static class ControlFlowSelection {
@@ -114,3 +137,4 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		return null;
 	}
 }
+

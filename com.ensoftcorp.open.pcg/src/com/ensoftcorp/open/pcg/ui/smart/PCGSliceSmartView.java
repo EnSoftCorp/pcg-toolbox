@@ -72,30 +72,39 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 		if(CommonQueries.getContainingFunctions(events).eval().nodes().size() > 1){
 			return null;
 		}
+		
+		// must have reverse or forward > 0
+		if(reverse == 0 && forward == 0){
+			return null;
+		}
 
-		PCG current = PCGSlice.getForwardPCGSlice(events, forward);
+		PCG current = PCGSlice.getPCGSlice(events, reverse, forward);
 
-		// compute what is on the frontier
-		PCG next = PCGSlice.getForwardPCGSlice(events, (forward+1));
-		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
-		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
-		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
-		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
+//		// compute what is on the frontier
+//		PCG next = PCGSlice.getPCGSlice(events, (reverse+1), (forward+1));
+//		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
+//		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
+//		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
+//		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
+//		
+//		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
+//		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
 		
 		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
-		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
+		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), Common.empty(), Common.empty(), markup);
+		
 		result.setInput(events);
 		return result;
 	}
 
 	@Override
-	public int getDefaultStepBottom() {
-		return 1;
-	}
-
-	@Override
 	public int getDefaultStepTop() {
 		return 1;
+	}
+	
+	@Override
+	public int getDefaultStepBottom() {
+		return 0;
 	}
 	
 	private static class ControlFlowSelection {

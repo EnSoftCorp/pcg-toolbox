@@ -57,6 +57,12 @@
       <script
             class="com.ensoftcorp.open.pcg.ui.smart.PCGSliceSmartView">
       </script>
+      <script
+            class="com.ensoftcorp.open.pcg.ui.smart.PCGReverseSliceSmartView">
+      </script>
+      <script
+            class="com.ensoftcorp.open.pcg.ui.smart.PCGForwardSliceSmartView">
+      </script>
    </extension>
 
 </plugin>

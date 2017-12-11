@@ -43,26 +43,30 @@ public class PCGFactory {
 	 * @return PCG
 	 */
 	public static PCG create(Q events) {
-		return create(events, false, true);
+		Q functions = CommonQueries.getContainingFunctions(events);
+		Q cfg = CommonQueries.cfg(functions);
+		return create(events, cfg);
 	}
 	
 	/**
-	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
-	 * Considers exceptional control flow paths if specified
+	 * Construct the PCGs corresponding to the given events and control flow graph
+	 * @param events
+	 * @param cfg
+	 * @return
+	 */
+	public static PCG create(Q cfg, Q events) {
+		return create(events, cfg, true, false);
+	}
+	
+	/**
+	 * Construct the PCGs corresponding to the given events and control flow graph
 	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
-	public static PCG create(Q events, boolean exceptionalControlFlow, boolean reverse) {
-		Q functions = CommonQueries.getContainingFunctions(events);
-		Q cfg;
-		if(exceptionalControlFlow){
-			cfg = CommonQueries.excfg(functions);
-		} else {
-			cfg = CommonQueries.cfg(functions);
-		}
-		events = events.intersection(cfg);
-		return create(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events, reverse);
+	public static PCG create(Q cfg, Q events, boolean preConditions, boolean postConditions) {
+		events = events.intersection(cfg).nodes(XCSG.ControlFlow_Node);
+		return create(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events, preConditions, postConditions);
 	}
 	
 	/**
@@ -76,7 +80,7 @@ public class PCGFactory {
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
-		return create(cfg, cfRoots, cfExits, events, true);
+		return create(cfg, cfRoots, cfExits, events, true, false);
 	}
 	
 	/**
@@ -89,7 +93,7 @@ public class PCGFactory {
 	 * @param events
 	 * @return PCG
 	 */
-	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events, boolean reverse) {
+	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events, boolean preConditions, boolean postConditions) {
 		if(CommonQueries.isEmpty(cfg)){
 			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
 		}
@@ -158,7 +162,7 @@ public class PCGFactory {
 //		}
 		
 		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), relaxNonEmptyRootsRequirement, cfExits.eval().nodes(), relaxNonEmptyExitsRequirement, CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
-		return create(ucfg, events);
+		return create(ucfg, events, preConditions, postConditions);
 	}
 	
 	/**
@@ -170,7 +174,7 @@ public class PCGFactory {
 	 * @return
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events){
-		return create(ucfg, events, true);
+		return create(ucfg, events, true, false);
 	}
 	
 	/**
@@ -181,14 +185,14 @@ public class PCGFactory {
 	 * @param events
 	 * @return
 	 */
-	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events, boolean reverse){
+	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events, boolean preConditions, boolean postConditions){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
 		PCG pcg = PCG.load(ucfg, events.eval().nodes());
 		if(pcg != null){
 			return pcg;
 		} else {
 			// PCG does not exist or could not be found, compute the PCG now
-			return new PCGFactory(ucfg, events.eval().nodes(), reverse).createPCG();
+			return new PCGFactory(ucfg, events.eval().nodes(), preConditions, postConditions).createPCG();
 		}
 	}
 	
@@ -222,7 +226,7 @@ public class PCGFactory {
 		 */
 		@Override
 		public GraphElement flush(SandboxGraphElement ge, Map<String,SandboxGraphElement> addresses) {
-			if(ge.isMirror()){
+			if(!ge.isMirror()){
 				if(ge instanceof SandboxNode){
 					Node node = Graph.U.createNode();
 					// add all the sandbox tags
@@ -329,8 +333,9 @@ public class PCGFactory {
 	 * Constructs a PCGFactory
 	 * @param ucfg
 	 * @param events
+	 * @param postConditions 
 	 */
-	private PCGFactory(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> events, boolean reverse) {
+	private PCGFactory(UniqueEntryExitControlFlowGraph ucfg, AtlasSet<Node> events, boolean preConditions, boolean postConditions) {
 		// storing references to create result object later
 		this.atlasUCFG = ucfg;
 		this.atlasEvents = events;
@@ -349,7 +354,7 @@ public class PCGFactory {
 		// always calculate on demand and in a sandbox because pcg could be
 		// calculated on a subset of the CFG
 		SandboxGraph domFrontier = DominanceAnalysis.computeSandboxedDominanceFrontier(sandbox, ucfg);
-		this.events = getImpliedEvents(sandbox, domFrontier, masterEntry, masterExit, sandbox.nodes(events), reverse);
+		this.events = getImpliedEvents(sandbox, domFrontier, masterEntry, masterExit, sandbox.nodes(events), preConditions, postConditions);
 		
 		// the pcg starts as the whole cfg with master entry/exit
 		this.pcg = sucfg;
@@ -568,13 +573,26 @@ public class PCGFactory {
 	
 	/**
 	 * Using dominance frontier, compute the set of implied event nodes.
+	 * @param postConditions 
 	 * @param ucfg
 	 * @return The set of event nodes that need to be retained in the final PCG, 
 	 * including implicit, explicit and start/exit nodes.
 	 */
-	private SandboxHashSet<SandboxNode> getImpliedEvents(Sandbox sandbox, SandboxGraph domFrontier, SandboxNode ucfgEntry, SandboxNode ucfgExit, SandboxHashSet<SandboxNode> explicitEvents, boolean reverse) {
+	private SandboxHashSet<SandboxNode> getImpliedEvents(Sandbox sandbox, SandboxGraph domFrontier, SandboxNode ucfgEntry, SandboxNode ucfgExit, SandboxHashSet<SandboxNode> explicitEvents, boolean preConditions, boolean postConditions) {
 		// get the dominance frontier within the function
-		SandboxHashSet<SandboxNode> impliedEvents = (reverse ? domFrontier.forward(explicitEvents).nodes() : domFrontier.reverse(explicitEvents).nodes());
+		SandboxHashSet<SandboxNode> impliedEvents = new SandboxHashSet<SandboxNode>(sandbox);
+		
+		if(!preConditions && !postConditions){
+			throw new IllegalArgumentException("Either pre or post conditions must be enabled");
+		}
+		
+		if(preConditions){
+			impliedEvents.addAll(domFrontier.forward(explicitEvents).nodes());
+		}
+			
+		if(postConditions){
+			impliedEvents.addAll(domFrontier.reverse(explicitEvents).nodes());
+		}
 		
 		// add entry and exit nodes as event nodes as well
 		impliedEvents.add(ucfgEntry);
