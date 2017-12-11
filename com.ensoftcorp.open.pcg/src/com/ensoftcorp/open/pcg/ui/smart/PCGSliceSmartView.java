@@ -17,21 +17,6 @@ import com.ensoftcorp.open.pcg.common.PCG;
 import com.ensoftcorp.open.pcg.common.PCGSlice;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 
-/**
- * Input:
- * One or more ControlFlow_Nodes or DataFlow_Nodes.
- * 
- * DataFlow_Nodes imply selection of their enclosing ControlFlow_Nodes.
- * ControlFlow_Nodes are interpreted as selected events.
- * 
- * Output:
- * The Event Flow Graph, where events are selected ControlFlow_Nodes.
- * 
- * Highlights: 
- * GREEN = true ControlFlow_Edges
- * RED   = false ControlFlow_Edges
- * CYAN  = events ControlFlow_Node
- */
 public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements IResizableScript, IExplorableScript {
 
 	@Override
@@ -46,13 +31,9 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 
 	@Override
 	public String getTitle() {
-		return "PCG Slice";
+		return "PCG Slice (experimental)";
 	}
 
-	protected boolean inlcudeExceptionalControlFlow(){
-		return false;
-	}
-	
 	@Override
 	public FrontierStyledResult explore(FrontierEdgeExploreEvent event, FrontierStyledResult oldResult) {
 		return SimpleScriptUtil.explore(this, event, oldResult);
@@ -79,16 +60,6 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 		}
 
 		PCG current = PCGSlice.getPCGSlice(events, reverse, forward);
-
-//		// compute what is on the frontier
-//		PCG next = PCGSlice.getPCGSlice(events, (reverse+1), (forward+1));
-//		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
-//		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
-//		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
-//		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
-//		
-//		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
-//		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
 		
 		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
 		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), Common.empty(), Common.empty(), markup);

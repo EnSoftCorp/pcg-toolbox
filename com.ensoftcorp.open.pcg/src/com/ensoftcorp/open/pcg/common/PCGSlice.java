@@ -16,20 +16,28 @@ import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.preferences.CommonsPreferences;
 import com.ensoftcorp.open.commons.sandbox.Sandbox;
 import com.ensoftcorp.open.commons.sandbox.SandboxGraph;
+import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
 import com.ensoftcorp.open.slice.analysis.DataDependenceGraph;
 
 public class PCGSlice {
 
+	// forward is buggy
+	@Deprecated
 	public static PCG getPCGSlice(Q events, int reverse, int forward){
 		Node function = CommonQueries.getContainingFunction(events.eval().nodes().one());
 		return getPCGSlice(CommonQueries.cfg(function), CommonQueries.dfg(function), events, reverse, forward);
 	}
 	
+	// forward is buggy
+	@Deprecated
 	public static PCG getPCGSlice(Q cfg, Q dfg, Q events, int reverse, int forward){
 		return getPCGSlice(cfg.eval(), dfg.eval(), events.eval().nodes(), reverse, forward);
 	}
 	
+	// TODO: why is the getPCGSlice(forward > 0) slice different than the getForwardPCGSlice result but the
+	// the getPCGSlice(reverse > 0) is the same as getReversePCGSlice result?
+	@Deprecated
 	public static PCG getPCGSlice(Graph cfg, Graph dfg, AtlasSet<Node> events, int reverse, int forward){
 		boolean preConditions = reverse >= 1;
 		boolean postConditions = forward >= 1;
@@ -48,45 +56,44 @@ public class PCGSlice {
 		// get reverse events
 		AtlasSet<Node> reverseEvents = new AtlasHashSet<Node>(events);
 		if(reverse > 1){
-			for(SandboxNode impliedEvent : domFrontier.forward(sandbox.nodes(reverseEvents)).nodes()){
-				reverseEvents.add(impliedEvent.toAtlasNode());
-			}
-			while(reverse == Integer.MAX_VALUE || (reverse--) > 1){
-				AtlasSet<Node> eventDataDependencies = ddg.getGraph().predecessors(Common.toQ(reverseEvents)).eval().nodes();
-				if(reverseEvents.size() == Common.toQ(reverseEvents).union(Common.toQ(eventDataDependencies)).eval().nodes().size()){
-					break; // fixed point
-				} else {
-					// update the set of events to include data dependencies and their implied events
-					reverseEvents.addAll(eventDataDependencies);
-					for(SandboxNode impliedEvent : domFrontier.forward(sandbox.nodes(reverseEvents)).nodes()){
-						reverseEvents.add(impliedEvent.toAtlasNode());
-					}
-				}
-			}
+			reverseEvents.addAll(getSliceEvents(reverse, sandbox, domFrontier, ddg, events, true));
 		}
 		
 		// get forward events
 		AtlasSet<Node> forwardEvents = new AtlasHashSet<Node>(events);
 		if(forward > 1){
-			for(SandboxNode impliedEvent : domFrontier.reverse(sandbox.nodes(forwardEvents)).nodes()){
-				forwardEvents.add(impliedEvent.toAtlasNode());
-			}
-			while(forward == Integer.MAX_VALUE || (forward--) > 1){
-				AtlasSet<Node> eventDataDependencies = ddg.getGraph().successors(Common.toQ(forwardEvents)).eval().nodes();
-				if(forwardEvents.size() == Common.toQ(forwardEvents).union(Common.toQ(eventDataDependencies)).eval().nodes().size()){
-					break; // fixed point
-				} else {
-					// update the set of events to include data dependencies and their implied events
-					forwardEvents.addAll(eventDataDependencies);
-					for(SandboxNode impliedEvent : domFrontier.reverse(sandbox.nodes(forwardEvents)).nodes()){
-						forwardEvents.add(impliedEvent.toAtlasNode());
-					}
-				}
-			}
+			forwardEvents.addAll(getSliceEvents(forward, sandbox, domFrontier, ddg, events, false));
 		}
 		
 		Q sliceEvents = Common.toQ(events).union(Common.toQ(reverseEvents), Common.toQ(forwardEvents));
 		return PCGFactory.create(Common.toQ(cfg), sliceEvents, preConditions, postConditions);
+	}
+
+	private static AtlasSet<Node> getSliceEvents(int steps, Sandbox sandbox, SandboxGraph domFrontier, DataDependenceGraph ddg, AtlasSet<Node> explicitEvents, boolean reverse) {
+		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>(explicitEvents);
+		impliedEvents.addAll(getImpliedEvents(sandbox, domFrontier, explicitEvents, reverse));
+		while(steps == Integer.MAX_VALUE || (steps--) > 1){
+			AtlasSet<Node> eventDataDependencies = reverse ? ddg.getGraph().predecessors(Common.toQ(impliedEvents)).eval().nodes() : ddg.getGraph().successors(Common.toQ(impliedEvents)).eval().nodes();
+			if(impliedEvents.size() == Common.toQ(impliedEvents).union(Common.toQ(eventDataDependencies)).eval().nodes().size()){
+				break; // fixed point
+			} else {
+				// update the set of events to include data dependencies and their implied events
+				impliedEvents.addAll(eventDataDependencies);
+				for(Node impliedEvent : getImpliedEvents(sandbox, domFrontier, impliedEvents, reverse)){
+					impliedEvents.add(impliedEvent);
+				}
+			}
+		}
+		return impliedEvents;
+	}
+
+	private static AtlasSet<Node> getImpliedEvents(Sandbox sandbox, SandboxGraph domFrontier, AtlasSet<Node> events, boolean reverse) {
+		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>();
+		SandboxHashSet<SandboxNode> fontier = reverse ? domFrontier.forward(sandbox.nodes(events)).nodes() : domFrontier.reverse(sandbox.nodes(events)).nodes();
+		for(SandboxNode impliedEvent : fontier){
+			impliedEvents.add(impliedEvent.toAtlasNode());
+		}
+		return impliedEvents;
 	}
 	
 	public static PCG getReversePCGSlice(Q cfg, Q dfg, Q events, int reverse){
