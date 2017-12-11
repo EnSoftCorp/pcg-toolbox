@@ -22,22 +22,19 @@ import com.ensoftcorp.open.slice.analysis.DataDependenceGraph;
 
 public class PCGSlice {
 
-	// forward is buggy
-	@Deprecated
+	private static final boolean flipDominanceForFoward = false;
+	
 	public static PCG getPCGSlice(Q events, int reverse, int forward){
 		Node function = CommonQueries.getContainingFunction(events.eval().nodes().one());
 		return getPCGSlice(CommonQueries.cfg(function), CommonQueries.dfg(function), events, reverse, forward);
 	}
 	
-	// forward is buggy
-	@Deprecated
 	public static PCG getPCGSlice(Q cfg, Q dfg, Q events, int reverse, int forward){
 		return getPCGSlice(cfg.eval(), dfg.eval(), events.eval().nodes(), reverse, forward);
 	}
 	
 	// TODO: why is the getPCGSlice(forward > 0) slice different than the getForwardPCGSlice result but the
 	// the getPCGSlice(reverse > 0) is the same as getReversePCGSlice result?
-	@Deprecated
 	public static PCG getPCGSlice(Graph cfg, Graph dfg, AtlasSet<Node> events, int reverse, int forward){
 		boolean preConditions = reverse >= 1;
 		boolean postConditions = forward >= 1;
@@ -70,8 +67,9 @@ public class PCGSlice {
 	}
 
 	private static AtlasSet<Node> getSliceEvents(int steps, Sandbox sandbox, SandboxGraph domFrontier, DataDependenceGraph ddg, AtlasSet<Node> explicitEvents, boolean reverse) {
+		boolean reverseDominance = reverse ? true : flipDominanceForFoward; // yes..this is confusing...sorry ~Ben
 		AtlasSet<Node> impliedEvents = new AtlasHashSet<Node>(explicitEvents);
-		impliedEvents.addAll(getImpliedEvents(sandbox, domFrontier, explicitEvents, reverse));
+		impliedEvents.addAll(getImpliedEvents(sandbox, domFrontier, explicitEvents, reverseDominance));
 		while(steps == Integer.MAX_VALUE || (steps--) > 1){
 			AtlasSet<Node> eventDataDependencies = reverse ? ddg.getGraph().predecessors(Common.toQ(impliedEvents)).eval().nodes() : ddg.getGraph().successors(Common.toQ(impliedEvents)).eval().nodes();
 			if(impliedEvents.size() == Common.toQ(impliedEvents).union(Common.toQ(eventDataDependencies)).eval().nodes().size()){
@@ -79,7 +77,7 @@ public class PCGSlice {
 			} else {
 				// update the set of events to include data dependencies and their implied events
 				impliedEvents.addAll(eventDataDependencies);
-				for(Node impliedEvent : getImpliedEvents(sandbox, domFrontier, impliedEvents, reverse)){
+				for(Node impliedEvent : getImpliedEvents(sandbox, domFrontier, impliedEvents, reverseDominance)){
 					impliedEvents.add(impliedEvent);
 				}
 			}
@@ -111,7 +109,7 @@ public class PCGSlice {
 			if(lastPCG.getPCG().eval().nodes().size() == lastPCG.getPCG().union(eventDataDependencies).eval().nodes().size()){
 				break; // fixed point
 			} else {
-				pcgs.add(PCGFactory.create(lastPCG.getPCG().union(eventDataDependencies)));
+				pcgs.add(PCGFactory.create(Common.toQ(cfg), lastPCG.getPCG().union(eventDataDependencies), true, false));
 			}
 		}
 		return pcgs.get(pcgs.size()-1);
@@ -142,7 +140,7 @@ public class PCGSlice {
 			if(lastPCG.getPCG().eval().nodes().size() == lastPCG.getPCG().union(eventDataDependencies).eval().nodes().size()){
 				break; // fixed point
 			} else {
-				pcgs.add(PCGFactory.create(lastPCG.getPCG().union(eventDataDependencies)));
+				pcgs.add(PCGFactory.create(Common.toQ(cfg), lastPCG.getPCG().union(eventDataDependencies), !flipDominanceForFoward, flipDominanceForFoward));
 			}
 		}
 		return pcgs.get(pcgs.size()-1);
