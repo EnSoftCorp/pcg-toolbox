@@ -2,6 +2,7 @@ package com.ensoftcorp.open.pcg.ui.smart;
 
 import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.script.FrontierStyledResult;
 import com.ensoftcorp.atlas.core.script.StyledResult;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
@@ -72,14 +73,14 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 			return null;
 		}
 
-		PCG current = PCGSlice.getLastPCGSliceIteration(events, Math.max(reverse, forward));
+		PCG current = PCGSlice.getForwardPCGSlice(events, forward);
 
 		// compute what is on the frontier
-		Q next = PCGSlice.getPCGSlice(events, Math.max(reverse, forward)+1);
-		Q frontierForward = current.getPCG().forwardStepOn(next, 1);
-		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
-		Q frontierReverse = current.getPCG().reverseStepOn(next, 1);
+		PCG next = PCGSlice.getForwardPCGSlice(events, (forward+1));
+		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
 		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
+		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
+		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
 		
 		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
 		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
