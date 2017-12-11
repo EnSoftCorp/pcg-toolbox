@@ -31,7 +31,7 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 
 	@Override
 	public String getTitle() {
-		return "PCG Slice (experimental)";
+		return "PCG Slice";
 	}
 
 	@Override
@@ -40,9 +40,10 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 	}
 
 	@Override
-	public FrontierStyledResult evaluate(IAtlasSelectionEvent event, int reverse, int forward) {
-		ControlFlowSelection filteredCFSelection = ControlFlowSelection.processSelection(filter(event));
-		Q events = filteredCFSelection.getSelectedControlFlow().union(filteredCFSelection.getImpliedControlFlow());
+	public FrontierStyledResult evaluate(IAtlasSelectionEvent selection, int reverse, int forward) {
+		// get the selected events
+		Q selections = filter(selection); // could be control or data flow selections
+		Q events = selections.nodes(XCSG.ControlFlow_Node).union(selections.nodes(XCSG.DataFlow_Node).parent());
 		
 		// don't try to create a pcg if the selection is empty
 		if(CommonQueries.isEmpty(events)){
@@ -53,62 +54,34 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 		if(CommonQueries.getContainingFunctions(events).eval().nodes().size() > 1){
 			return null;
 		}
-		
-		// must have reverse or forward > 0
-		if(reverse == 0 && forward == 0){
-			return null;
-		}
 
+		// compute the selected PCG slice
 		PCG current = PCGSlice.getPCGSlice(events, reverse, forward);
+
+		// compute what is on the frontier
+		PCG next = PCGSlice.getPCGSlice(events, (reverse+1), (forward+1));
+		Q frontierReverse = current.getPCG().reverseStepOn(next.getPCG().difference(Common.toQ(next.getMasterExit())), 1);
+		frontierReverse = frontierReverse.retainEdges().differenceEdges(current.getPCG());
+		frontierReverse = (reverse == Integer.MAX_VALUE ? Common.empty() : frontierReverse);
+		Q frontierForward = current.getPCG().forwardStepOn(next.getPCG().difference(Common.toQ(next.getMasterEntry())), 1);
+		frontierForward = frontierForward.retainEdges().differenceEdges(current.getPCG());
+		frontierForward = (forward == Integer.MAX_VALUE ? Common.empty() : frontierForward);
 		
+		// style and return the result
 		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
-		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), Common.empty(), Common.empty(), markup);
-		
+		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
 		result.setInput(events);
 		return result;
 	}
 
 	@Override
 	public int getDefaultStepTop() {
-		return 1;
+		return 0;
 	}
 	
 	@Override
 	public int getDefaultStepBottom() {
 		return 0;
-	}
-	
-	private static class ControlFlowSelection {
-		
-		public Q getSelectedControlFlow() {
-			return selectedControlFlow;
-		}
-
-		/**
-		 * Directly selected control flow nodes and the 
-		 * control flow nodes which enclose any selected
-		 * data flow nodes.
-		 * 
-		 * @return
-		 */
-		public Q getImpliedControlFlow() {
-			return impliedControlFlow;
-		}
-
-		private Q selectedControlFlow;
-		private Q impliedControlFlow;
-
-		private ControlFlowSelection(Q selectedControlFlow, Q enclosingControlFlow) {
-					this.selectedControlFlow = selectedControlFlow;
-					this.impliedControlFlow = enclosingControlFlow;
-		}
-
-		public static ControlFlowSelection processSelection(Q filteredSelection) {
-			Q selectedDataFlow = filteredSelection.nodesTaggedWithAny(XCSG.DataFlow_Node);
-			Q selectedControlFlow = filteredSelection.nodesTaggedWithAny(XCSG.ControlFlow_Node);		
-			Q impliedControlFlow = selectedControlFlow.union(selectedDataFlow.parent());
-			return new ControlFlowSelection(selectedControlFlow, impliedControlFlow);
-		}
 	}
 
 	@Override
