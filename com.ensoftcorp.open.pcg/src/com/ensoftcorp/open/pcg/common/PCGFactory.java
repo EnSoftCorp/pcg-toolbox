@@ -11,6 +11,7 @@ import com.ensoftcorp.atlas.core.db.graph.GraphElement;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.NodeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
+import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
@@ -36,6 +37,86 @@ import com.ensoftcorp.open.pcg.preferences.PCGPreferences;
  */
 public class PCGFactory {
 	
+	/**
+	 * Constructs the PCG corresponding to the given events within the containing control flow graph and returns
+	 * only the nodes in the resulting PCG. 
+	 * 
+	 * This result is much cheaper to compute than PCGFactory.create alternatives which include PCG edges.
+	 * 
+	 * @param events
+	 * @return
+	 * @return
+	 */
+	public static AtlasSet<Node> createNodesOnly(Q events){
+		Q functions = CommonQueries.getContainingFunctions(events);
+		Q cfg = CommonQueries.cfg(functions);
+		return createNodesOnly(events, cfg);
+	}
+	
+	/**
+	 * Construct the PCGs corresponding to the given events and control flow graph and returns
+	 * only the nodes in the resulting PCG. 
+	 * 
+	 * This result is much cheaper to compute than PCGFactory.create alternatives which include PCG edges.
+	 * @param function
+	 * @param events
+	 * @return
+	 */
+	public static AtlasSet<Node> createNodesOnly(Q events, Q cfg) {
+		events = events.intersection(cfg).nodes(XCSG.ControlFlow_Node);
+		return createNodesOnly(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events); 
+	}
+
+	/**
+	 * Construct the PCG for the given CFG, selected CFG roots, and the events
+	 * of interest. Note that roots, exits, and events must all be contained
+	 * within the given cfg and returns only the nodes in the resulting PCG. 
+	 * 
+	 * This result is much cheaper to compute than PCGFactory.create alternatives which include PCG edges.
+	 * 
+	 * @param cfg
+	 * @param function
+	 * @param events
+	 * @return 
+	 */
+	public static AtlasSet<Node> createNodesOnly(Q cfg, Q cfRoots, Q cfExits, Q events) {
+		if(CommonQueries.isEmpty(cfg)){
+			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
+		}
+		// see PCGFactory.create for some design choice related to relaxing root/exit requirements
+		boolean relaxNonEmptyRootsRequirement = true;
+		boolean relaxNonEmptyExitsRequirement = true;
+		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), relaxNonEmptyRootsRequirement, cfExits.eval().nodes(), relaxNonEmptyExitsRequirement, CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
+		return createNodesOnly(ucfg, events);
+	}
+
+	/**
+	 * Constructs a PCG for the given unique entry/exit control flow graph and a
+	 * set of events and returns only the nodes in the resulting PCG. 
+	 * 
+	 * This result is much cheaper to compute than PCGFactory.create alternatives which include PCG edges.
+	 * 
+	 * @param ucfg
+	 * @param events
+	 * @return
+	 */
+	public static AtlasSet<Node> createNodesOnly(UniqueEntryExitControlFlowGraph ucfg, Q events){
+		events = events.intersection(Common.toQ(ucfg.getCFG()));
+		AtlasSet<Node> conditions = Common.toQ(ucfg.getCFG()).nodes(XCSG.ControlFlowCondition).eval().nodes();
+		AtlasSet<Node> result = new AtlasHashSet<Node>();
+		for(Node event : events.eval().nodes()){
+			result.add(event);
+			for(Node condition : conditions){
+				if(CommonQueries.isGoverningBranch(condition, event)){
+					result.add(condition);
+				}
+			}
+		}
+		result.add(ucfg.getEntryNode());
+		result.add(ucfg.getExitNode());
+		return result;
+	}
+
 	/**
 	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
 	 * @param function
