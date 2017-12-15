@@ -84,7 +84,7 @@ public class PCGHighlighter {
 		m.setNode(ipcgCallGraphRootMasterNodes, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 
 		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCG_Edge);
+		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCGEdge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges

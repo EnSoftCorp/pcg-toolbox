@@ -22,7 +22,7 @@ public class IPCG {
 		/**
 		 * Tag applied to CFG edges that are retained in the final PCG
 		 */
-		public static final String InterproceduralPCG_Edge = "InterproceduralPCG_Edge";
+		public static final String InterproceduralPCGEdge = "InterproceduralPCG_Edge";
 	}
 
 	public static Q getAncestorFunctions(Q events){
@@ -231,10 +231,10 @@ public class IPCG {
 			throw new IllegalArgumentException("to is null");
 		}
 		
-		Q pcgEdges = Common.universe().edgesTaggedWithAny(IPCGEdge.InterproceduralPCG_Edge).betweenStep(Common.toQ(from), Common.toQ(to));
+		Q pcgEdges = Common.universe().edgesTaggedWithAny(IPCGEdge.InterproceduralPCGEdge).betweenStep(Common.toQ(from), Common.toQ(to));
 		if (pcgEdges.eval().edges().isEmpty()) {
 			Edge intermediateEdge = Graph.U.createEdge(from, to);
-			intermediateEdge.tag(IPCGEdge.InterproceduralPCG_Edge);
+			intermediateEdge.tag(IPCGEdge.InterproceduralPCGEdge);
 			return intermediateEdge;
 		} else {
 			return pcgEdges.eval().edges().one();

@@ -306,8 +306,8 @@ public class PCGFactory {
 	
 	/** Sandbox universe.
 	 *  Initialized to CFG, transformed to the PCG
-	 *  Nodes: ControlFlow_Edge, PCG_Edge 
-	 *  Edges: ControlFlow_Node, PCG_Master_Entry, PCG_Master_Exit */
+	 *  Nodes: ControlFlow_Edge, PCGEdge 
+	 *  Edges: ControlFlow_Node, PCGMasterEntry, PCGMasterExit */
 	private SandboxGraph pcg;
 	
 	private static class PCGFlushProvider extends DefaultFlushProvider {
