@@ -68,7 +68,7 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		
 		Node function = functions.one();
 		Q cfg = inlcudeExceptionalControlFlow() ? CommonQueries.excfg(function) : CommonQueries.cfg(function);
-		Q pcg = PCGFactory.create(cfg, events).getPCG();
+		Q pcg = PCGFactory.create(cfg, events, true).getPCG();
 		
 		// need to union in the contains edges because they are not contained in the default index
 		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));

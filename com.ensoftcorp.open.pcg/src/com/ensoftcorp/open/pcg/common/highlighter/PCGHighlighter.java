@@ -32,7 +32,7 @@ public class PCGHighlighter {
 			@Override
 			public PropertySet get(GraphElement element) {
 				if (element instanceof Edge) {
-					if (element.taggedWith(PCGEdge.EventFlow_Edge) && element.hasAttr(XCSG.conditionValue)) {
+					if (element.taggedWith(PCGEdge.PCGEdge) && element.hasAttr(XCSG.conditionValue)) {
 						return new PropertySet().set(MarkupProperty.LABEL_TEXT, ""+element.getAttr(XCSG.conditionValue)); //$NON-NLS-1$
 					}
 				}
@@ -43,19 +43,20 @@ public class PCGHighlighter {
 		Markup m = new Markup(m2);
 
 		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edges(PCGEdge.EventFlow_Edge);
+		Q cfEdge = Query.universe().edges(PCGEdge.PCGEdge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges
 		CFGHighlighter.applyHighlightsForCFEdges(m);
 		
+		Q pcgBackEdges = Query.universe().edges(PCGEdge.PCGBackEdge);
+		m.setEdge(pcgBackEdges, MarkupProperty.EDGE_COLOR, Color.BLUE.darker());
 		
 		// highlight loop depths
 		CFGHighlighter.applyHighlightsForLoopDepth(m);
 		
 		// color events (this should override previous settings)
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
-		
 		
 		return m;
 	}
@@ -74,16 +75,16 @@ public class PCGHighlighter {
 		m.setNode(ipcgCallGraphRoots, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 		
 		// highlight the master entry/exit nodes of root function red
-		Q ipcgCallGraphRootMasterNodes = ipcgCallGraphRoots.children().nodes(PCGNode.EventFlow_Master_Entry, PCGNode.EventFlow_Master_Exit);
+		Q ipcgCallGraphRootMasterNodes = ipcgCallGraphRoots.children().nodes(PCGNode.PCGMasterEntry, PCGNode.PCGMasterExit);
 		// alternatively it could be disconnected, so just grab them by traversing the functions CFG
-		Q eventFlowEdges = Common.universe().edges(PCGEdge.EventFlow_Edge);
+		Q eventFlowEdges = Common.universe().edges(PCGEdge.PCGEdge);
 		Q functionCFG = CommonQueries.cfg(ipcgCallGraphRootMasterNodes);
-		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.predecessors(functionCFG).nodes(PCGNode.EventFlow_Master_Entry));
-		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.successors(functionCFG).nodes(PCGNode.EventFlow_Master_Exit));
+		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.predecessors(functionCFG).nodes(PCGNode.PCGMasterEntry));
+		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.successors(functionCFG).nodes(PCGNode.PCGMasterExit));
 		m.setNode(ipcgCallGraphRootMasterNodes, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 
 		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.EventFlow_Edge, IPCGEdge.InterproceduralEventFlow_Edge);
+		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCG_Edge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges

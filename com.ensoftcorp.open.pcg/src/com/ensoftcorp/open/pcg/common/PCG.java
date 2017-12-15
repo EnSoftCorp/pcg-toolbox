@@ -40,7 +40,7 @@ public class PCG {
 	 * unique PCG instance serialized in the Atlas graph.
 	 */
 	@XCSG_Extension
-	public static final String EventFlow_Instances = "EventFlow_Instances";
+	public static final String PCGInstances = "PCGInstances";
 	
 	/**
 	 * Defines tags and attributes for PCG nodes
@@ -50,13 +50,13 @@ public class PCG {
 		 * Tag applied to the newly created master entry node
 		 */
 		@XCSG_Extension
-		public static final String EventFlow_Master_Entry = "EventFlow_Master_Entry";
+		public static final String PCGMasterEntry = "PCGMasterEntry";
 		
 		/**
 		 * Tag applied to the newly create master exit node
 		 */
 		@XCSG_Extension
-		public static final String EventFlow_Master_Exit = "EventFlow_Master_Exit";
+		public static final String PCGMasterExit = "PCGMasterExit";
 	}
 	
 	/**
@@ -67,7 +67,19 @@ public class PCG {
 		 * Tag applied to CFG edges that are retained in the final PCG
 		 */
 		@XCSG_Extension
-		public static final String EventFlow_Edge = "EventFlow_Edge";
+		public static final String PCGEdge = "PCGEdge";
+		
+		/**
+		 * Tag applied to PCG edges that are back edges (similar to XCSG.ControlFlowBackEdge for PCGs)
+		 */
+		@XCSG_Extension
+		public static final String PCGBackEdge = "PCGBackEdge";
+		
+		/**
+		 * Tag applied to PCG Back eges that are reentrant
+		 */
+		@XCSG_Extension
+		public static final String PCGReentryEdge = "PCGReentryEdge";
 	}
 	
 	private Graph pcg;
@@ -243,7 +255,7 @@ public class PCG {
 	 */
 	public static Set<PCG> loadAll() {
 		Set<PCG> pcgs = new HashSet<PCG>();
-		for(Node masterEntry : Common.universe().nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes()){
+		for(Node masterEntry : Common.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes()){
 			for(Object instance : PCG.getInstances(masterEntry)){
 				JSONObject json = (JSONObject) instance;
 				pcgs.add(decodePCGInstance(json));
@@ -256,7 +268,7 @@ public class PCG {
 	protected static void save(PCG instance){
 		JSONArray instances = getInstances(instance.getMasterEntry());
 		instances.add(getPCGInstanceJSON(instance));
-		instance.getMasterEntry().putAttr(EventFlow_Instances, instances.toJSONString());
+		instance.getMasterEntry().putAttr(PCG.PCGInstances, instances.toJSONString());
 	}
 	
 	/**
@@ -275,15 +287,15 @@ public class PCG {
 				updatedInstances.add(json);
 			}
 		}
-		pcg.getMasterEntry().putAttr(EventFlow_Instances, updatedInstances.toJSONString());
+		pcg.getMasterEntry().putAttr(PCGInstances, updatedInstances.toJSONString());
 	}
 	
 	/**
 	 * Purges all records of PCGs from the Atlas graph
 	 */
 	public static void deleteAll(){
-		for(Node masterEntry : new AtlasHashSet<Node>(Common.universe().nodes(PCG.PCGNode.EventFlow_Master_Entry).eval().nodes())){
-			masterEntry.attr().remove(EventFlow_Instances);
+		for(Node masterEntry : new AtlasHashSet<Node>(Common.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes())){
+			masterEntry.attr().remove(PCGInstances);
 		}
 	}
 
@@ -656,8 +668,8 @@ public class PCG {
 	
 	// helper method to return the PCG json object for each instance stored on the master entry node
 	private static JSONArray getInstances(Node masterEntry){
-		if(masterEntry.hasAttr(PCG.EventFlow_Instances)){
-			String json = masterEntry.getAttr(PCG.EventFlow_Instances).toString();
+		if(masterEntry.hasAttr(PCG.PCGInstances)){
+			String json = masterEntry.getAttr(PCG.PCGInstances).toString();
 			JSONParser parser = new JSONParser();
 			try {
 				return (JSONArray) parser.parse(json);

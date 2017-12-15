@@ -17,6 +17,7 @@ import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
+import com.ensoftcorp.open.commons.algorithms.LoopIdentification;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.preferences.CommonsPreferences;
@@ -119,25 +120,50 @@ public class PCGFactory {
 
 	/**
 	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
+	 * 
 	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
 	public static PCG create(Q events) {
+		return create(events, false);
+	}
+	
+	/**
+	 * Construct the PCGs corresponding to the given events with the containing functions control flow graph
+	 * 
+	 * @param events
+	 * @param labelBackEdges
+	 * @return
+	 */
+	public static PCG create(Q events, boolean labelBackEdges) {
 		Q functions = CommonQueries.getContainingFunctions(events);
 		Q cfg = CommonQueries.cfg(functions);
-		return create(events, cfg);
+		return create(events, cfg, labelBackEdges);
 	}
 	
 	/**
 	 * Construct the PCGs corresponding to the given events and control flow graph
+	 * 
 	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q events) {
+		return create(cfg, events, false);
+	}
+
+	/**
+	 * Construct the PCGs corresponding to the given events and control flow graph
+	 * 
+	 * @param cfg
+	 * @param events
+	 * @param labelBackEdges
+	 * @return
+	 */
+	public static PCG create(Q cfg, Q events, boolean labelBackEdges) {
 		events = events.intersection(cfg).nodes(XCSG.ControlFlow_Node);
-		return create(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events);
+		return create(cfg, cfg.nodes(XCSG.controlFlowRoot), cfg.nodes(XCSG.controlFlowExitPoint), events, labelBackEdges);
 	}
 	
 	/**
@@ -151,6 +177,21 @@ public class PCGFactory {
 	 * @return PCG
 	 */
 	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
+		return create(cfg, cfRoots, cfExits, events, false);
+	}
+
+	/**
+	 * Construct the PCG for the given CFG, selected CFG roots, and the events
+	 * of interest. Note that roots, exits, and events must all be contained
+	 * within the given cfg.
+	 * 
+	 * @param cfg
+	 * @param cfRoots
+	 * @param cfExits
+	 * @param events
+	 * @return
+	 */
+	public static PCG create(Q cfg, Q cfRoots, Q cfExits, Q events, boolean labelBackEdges) {
 		if(CommonQueries.isEmpty(cfg)){
 			throw new RuntimeException("Control flow graph is empty! Is the containing function a library function?");
 		}
@@ -219,7 +260,7 @@ public class PCGFactory {
 //		}
 		
 		UniqueEntryExitControlFlowGraph ucfg = new UniqueEntryExitControlFlowGraph(cfg.eval(), cfRoots.eval().nodes(), relaxNonEmptyRootsRequirement, cfExits.eval().nodes(), relaxNonEmptyExitsRequirement, CommonsPreferences.isMasterEntryExitContainmentRelationshipsEnabled());
-		return create(ucfg, events);
+		return create(ucfg, events, labelBackEdges);
 	}
 	
 	/**
@@ -231,13 +272,26 @@ public class PCGFactory {
 	 * @return
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events){
+		return create(ucfg, events, false);
+	}
+	
+	/**
+	 * Constructs a PCG for the given unique entry/exit control flow graph and a
+	 * set of events.
+	 * 
+	 * @param ucfg
+	 * @param events
+	 * @param labelBackEdges
+	 * @return
+	 */
+	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events, boolean labelBackEdges){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
 		PCG pcg = PCG.load(ucfg, events.eval().nodes());
 		if(pcg != null){
 			return pcg;
 		} else {
 			// PCG does not exist or could not be found, compute the PCG now
-			return new PCGFactory(ucfg, events.eval().nodes()).createPCG();
+			return new PCGFactory(ucfg, events.eval().nodes()).createPCG(labelBackEdges);
 		}
 	}
 	
@@ -252,8 +306,8 @@ public class PCGFactory {
 	
 	/** Sandbox universe.
 	 *  Initialized to CFG, transformed to the PCG
-	 *  Nodes: ControlFlow_Edge, EventFlow_Edge 
-	 *  Edges: ControlFlow_Node, EventFlow_Master_Entry, EventFlow_Master_Exit */
+	 *  Nodes: ControlFlow_Edge, PCG_Edge 
+	 *  Edges: ControlFlow_Node, PCG_Master_Entry, PCG_Master_Exit */
 	private SandboxGraph pcg;
 	
 	private static class PCGFlushProvider extends DefaultFlushProvider {
@@ -262,7 +316,7 @@ public class PCGFactory {
 		 * the Atlas graph and updates the address map accordingly.
 		 * 
 		 * This implementation differs from the default implementation by
-		 * attempting to re-use EventFlow edges that already exist between the
+		 * attempting to re-use PCG edges that already exist between the
 		 * two given nodes if the sandbox created a new edge between the two
 		 * edges.
 		 * 
@@ -293,7 +347,7 @@ public class PCGFactory {
 					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
 					
 					Edge edge = null;
-					if(sandboxEdge.tags().contains(PCGEdge.EventFlow_Edge)){
+					if(sandboxEdge.tags().contains(PCGEdge.PCGEdge)){
 						// only create event flow edges between nodes if one does not already exist
 						edge = findPCGEdge(sandboxEdge, from, to);
 						if (edge == null) {
@@ -355,7 +409,7 @@ public class PCGFactory {
 
 		/** find a compatible PCG Edge with respect to adjacent nodes and XCSG.conditionValue */
 		private Edge findPCGEdge(SandboxEdge sandboxEdge, Node from, Node to) {
-			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.EventFlow_Edge);
+			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.PCGEdge);
 			AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
 			boolean hasAttr = sandboxEdge.hasAttr(XCSG.conditionValue);
 			Object cv = sandboxEdge.getAttr(XCSG.conditionValue);
@@ -409,8 +463,7 @@ public class PCGFactory {
 	 * Construct PCG
 	 * @return
 	 */
-	private PCG createPCG(){
-		
+	private PCG createPCG(boolean labelBackEdges){
 		// retain a set of consumed nodes that are to be removed from the graph after the loop
 		SandboxHashSet<SandboxNode> nodesToRemove = sandbox.emptyNodeSet();
 		for(SandboxNode node : pcg.nodes()) {
@@ -434,28 +487,27 @@ public class PCGFactory {
 		pcg.edges().clear();
 		pcg.edges().addAll(pcgEdgeSet);
 		
-		
 		// tag the entry and exit nodes
-		masterEntry.tag(PCG.PCGNode.EventFlow_Master_Entry);
-		masterExit.tag(PCG.PCGNode.EventFlow_Master_Exit);
+		masterEntry.tag(PCG.PCGNode.PCGMasterEntry);
+		masterExit.tag(PCG.PCGNode.PCGMasterExit);
 		
 		// tag each edge as an event flow edge
 		// this gets an edges from the master entry to the roots
 		// and from the exits to the master exit
 		for(SandboxEdge edge : pcg.edges()){
-			edge.tag(PCG.PCGEdge.EventFlow_Edge);
-		}		
-
-		// as a final sanity check - we could check that nodes should only be included 
-		// if they are reachable on the path pcg.between(masterEntry,masterExit)
-		// disabled because not really needed and sandbox between isn't efficient
-//		pcg = pcg.between(masterEntry, masterExit);
+			edge.tag(PCG.PCGEdge.PCGEdge);
+		}
 		
 		// flush the result and construct the PCG object
 		Graph atlasPCG = sandbox.flush(pcg);
 		PCG result = new PCG(atlasPCG, atlasUCFG, atlasEvents);
 		
-		// save the pcg instance parameters to the master entry node EventFlow_Instances attribute
+		if(labelBackEdges){
+			Node masterEntry = Common.toQ(atlasPCG).nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes().one();
+			labelBackEdges(atlasPCG, masterEntry);
+		}
+		
+		// save the pcg instance parameters to the master entry node PCG_Instances attribute
 		if(PCGPreferences.isSerializePCGInstancesEnabled()){
 			PCG.save(result);
 		}
@@ -524,8 +576,7 @@ public class PCGFactory {
 	private void connectToSuccessors(SandboxEdge inEdge, Set<SandboxNode> successors) {
 		SandboxNode predecessor = inEdge.from();
 		for (SandboxNode successor : successors) {
-			this.getOrCreatePCGEdge(predecessor, successor, 
-					inEdge.getAttr(XCSG.conditionValue));
+			this.getOrCreatePCGEdge(predecessor, successor, inEdge.getAttr(XCSG.conditionValue));
 		}
 		// merge (boolean) edges
 		this.mergeEdges(predecessor);
@@ -560,27 +611,32 @@ public class PCGFactory {
 			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
 			// successors with in degree > 1 
 			if (successorEdges.size() > 1){
-				if (node.taggedWith(XCSG.ControlFlowIfCondition) 
-						|| node.taggedWith(XCSG.ControlFlowLoopCondition)) {
-					
-					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
+				if (node.taggedWith(XCSG.ControlFlowIfCondition) || node.taggedWith(XCSG.ControlFlowLoopCondition)) {
 					/* NOTE: because nodes are consumed in no particular order, it is possible to
 					 * encounter a merge of an unconditional edge with true or false edge, indicating
 					 * that the paths are partially merged already.
+					 * 
 					 * This should imply that the successor is not an event, and all paths to it will be merged
 					 * eventually.
+					 * 
 					 * This also means that the merged edge should not be removed along with the others,
 					 * in the case that two unconditional edges are being merged.  This can happen as a result of 
 					 * merging deeply nested branches (depth 3 is sufficient). 
 					 */
+					
+					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
 					assertConditionValues(successorEdges);
+					
+					boolean isBackEdge = false;
+					for(SandboxEdge successorEdge : successorEdges){
+						isBackEdge |= successorEdge.taggedWith(XCSG.ControlFlowBackEdge);
+					}
 
 					SandboxEdge mergedEdge = this.getOrCreatePCGEdge(node, successor, null);
 					
 					// remove the edges which have been replaced (but not the one representing the merged paths) 
 					successorEdges.remove(mergedEdge);
 					pcg.edges().removeAll(successorEdges);
-					
 				} else if (node.taggedWith(XCSG.ControlFlowSwitchCondition)) {
 					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
 					assertConditionValues(successorEdges);
@@ -589,7 +645,6 @@ public class PCGFactory {
 					// unexpected 
 					throw new RuntimeException("Unhandled case for merging duplicate edges at node: " + node); //$NON-NLS-1$
 				}
-				
 			}
 		}
 	}
@@ -674,13 +729,23 @@ public class PCGFactory {
 		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(PCGEdge.EventFlow_Edge);
-		if (conditionValue!=null)
+		pcgEdge.tag(PCGEdge.PCGEdge);
+		if (conditionValue != null){
 			pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
+		}
 		
 		pcg.edges().add(pcgEdge);
-
 		return pcgEdge;
+	}
+	
+	private void labelBackEdges(Graph atlasPCG, Node masterEntry) {
+		LoopIdentification loops = new LoopIdentification(atlasPCG, masterEntry);
+		for (Edge reentryEdge : loops.getReentryEdges()) {
+			reentryEdge.tag(PCG.PCGEdge.PCGReentryEdge);
+		}
+		for (Edge loopbackEdge : loops.getLoopbacks()) {
+			loopbackEdge.tag(PCG.PCGEdge.PCGBackEdge);
+		}
 	}
 	
 }
