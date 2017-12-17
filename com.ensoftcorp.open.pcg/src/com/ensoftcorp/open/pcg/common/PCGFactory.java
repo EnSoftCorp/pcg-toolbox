@@ -626,12 +626,6 @@ public class PCGFactory {
 					
 					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
 					assertConditionValues(successorEdges);
-					
-					boolean isBackEdge = false;
-					for(SandboxEdge successorEdge : successorEdges){
-						isBackEdge |= successorEdge.taggedWith(XCSG.ControlFlowBackEdge);
-					}
-
 					SandboxEdge mergedEdge = this.getOrCreatePCGEdge(node, successor, null);
 					
 					// remove the edges which have been replaced (but not the one representing the merged paths) 
