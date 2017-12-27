@@ -139,7 +139,7 @@ public class PCGFactory {
 	public static PCG create(Q events, boolean labelBackEdges) {
 		Q functions = CommonQueries.getContainingFunctions(events);
 		Q cfg = CommonQueries.cfg(functions);
-		return create(events, cfg, labelBackEdges);
+		return create(cfg, events, labelBackEdges);
 	}
 	
 	/**
