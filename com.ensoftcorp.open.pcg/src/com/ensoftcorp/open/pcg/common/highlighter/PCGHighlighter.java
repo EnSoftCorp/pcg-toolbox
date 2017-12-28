@@ -47,13 +47,10 @@ public class PCGHighlighter {
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges
-		CFGHighlighter.applyHighlightsForCFEdges(m);
+		CFGHighlighter.applyHighlightsForCFG(m);
 		
 		Q pcgBackEdges = Query.universe().edges(PCGEdge.PCGBackEdge);
 		m.setEdge(pcgBackEdges, MarkupProperty.EDGE_COLOR, Color.BLUE.darker());
-		
-		// highlight loop depths
-		CFGHighlighter.applyHighlightsForLoopDepth(m);
 		
 		// color events (this should override previous settings)
 		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
@@ -88,10 +85,7 @@ public class PCGHighlighter {
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges
-		CFGHighlighter.applyHighlightsForCFEdges(m);
-		
-		// highlight loop depths
-		CFGHighlighter.applyHighlightsForLoopDepth(m);
+		CFGHighlighter.applyHighlightsForCFG(m);
 		
 		// color the events and implicit callsite events (this should override previous settings)
 		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
