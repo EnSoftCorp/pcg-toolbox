@@ -69,7 +69,11 @@ public class PCGSliceSmartView extends FilteringAtlasSmartViewScript implements 
 		
 		// style and return the result
 		IMarkup markup = PCGHighlighter.getPCGMarkup(current.getEvents());
-		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
+		
+		// uncomment to show frontier edges (although they can be really confusing in this context)
+//		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), frontierReverse, frontierForward, markup);
+		FrontierStyledResult result = new FrontierStyledResult(current.getPCG(), Common.empty(), Common.empty(), markup);
+		
 		result.setInput(events);
 		return result;
 	}
