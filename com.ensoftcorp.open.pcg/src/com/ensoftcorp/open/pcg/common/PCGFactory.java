@@ -286,7 +286,7 @@ public class PCGFactory {
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events, boolean labelBackEdges){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
-		PCG pcg = PCG.load(ucfg, events.eval().nodes());
+		PCG pcg = null; //PCG.load(ucfg, events.eval().nodes());
 		if(pcg != null){
 			return pcg;
 		} else {
