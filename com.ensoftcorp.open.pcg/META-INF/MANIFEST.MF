@@ -15,3 +15,4 @@ Export-Package: com.ensoftcorp.open.pcg,
  com.ensoftcorp.open.pcg.common.highlighter,
  com.ensoftcorp.open.pcg.preferences,
  com.ensoftcorp.open.pcg.ui
+Automatic-Module-Name: com.ensoftcorp.open.pcg

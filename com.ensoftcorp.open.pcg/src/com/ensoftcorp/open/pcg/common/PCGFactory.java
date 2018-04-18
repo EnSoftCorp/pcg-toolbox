@@ -286,13 +286,13 @@ public class PCGFactory {
 	 */
 	public static PCG create(UniqueEntryExitControlFlowGraph ucfg, Q events, boolean labelBackEdges){
 		events = events.intersection(Common.toQ(ucfg.getCFG()));
-		PCG pcg = null; //PCG.load(ucfg, events.eval().nodes());
-		if(pcg != null){
-			return pcg;
-		} else {
+//		PCG pcg = null; //PCG.load(ucfg, events.eval().nodes());
+//		if(pcg != null){
+//			return pcg;
+//		} else {
 			// PCG does not exist or could not be found, compute the PCG now
 			return new PCGFactory(ucfg, events.eval().nodes()).createPCG(labelBackEdges);
-		}
+//		}
 	}
 	
 	// temporary variables for use in factory construction of a pcg
