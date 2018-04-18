@@ -86,6 +86,9 @@ public class IPCG {
 	}
 	
 	public static Q getIPCG(Q events, Q selectedAncestors, Q selectedExpansions, boolean exceptionalControlFlow){
+		// [jdm] enabling back edges is likely to cause graph layout issues if Method-level call edges are not included
+		boolean exitBackEdge = false;
+		
 		events = events.nodes(XCSG.ControlFlow_Node);
 		selectedAncestors = selectedAncestors.intersection(getAncestorFunctions(events));
 		Q eventFunctions = getFunctionsContainingEvents(events);
@@ -144,7 +147,7 @@ public class IPCG {
 								Log.error("Error creating IPCG edge", e);
 							}
 						} else {
-							// taget is an expanded function, we create an edge to the function's pcg master entry
+							// target is an expanded function, we create an edge to the function's pcg master entry
 							try {
 								if(pcgs.containsKey(expandedFunctionCallsiteCallGraphRestrictedTarget)){
 									Node masterEntry = pcgs.get(expandedFunctionCallsiteCallGraphRestrictedTarget).getMasterEntry();
@@ -175,15 +178,16 @@ public class IPCG {
 			resultEdges.addAll(pcgG.edges());
 			resultNodes.addAll(pcgG.nodes());
 			
-			// ipcg edges from callsites have already been added, but we need to 
-			// add ipcg edges from the master exit to back up the stack to the callsite
-			for(Node callsite : Common.toQ(ipcgEdges).predecessors(Common.toQ(pcg.getMasterEntry())).eval().nodes()){
-				
-				// for now just returning the callsite
-				Edge ipcgEdge = getOrCreateIPCGEdge(pcg.getMasterExit(), callsite);
-				ipcgEdges.add(ipcgEdge);
-				
-				// TODO: consider if its better to return to the callsites control flow successor
+			if (exitBackEdge) {
+				// ipcg edges from callsites have already been added, but we need to 
+				// add ipcg edges from the master exit to back up the stack to the callsite
+				for(Node callsite : Common.toQ(ipcgEdges).predecessors(Common.toQ(pcg.getMasterEntry())).eval().nodes()){
+					
+					// for now just returning the callsite
+					Edge ipcgEdge = getOrCreateIPCGEdge(pcg.getMasterExit(), callsite);
+					ipcgEdges.add(ipcgEdge);
+					
+					// TODO: consider if its better to return to the callsites control flow successor
 //				// TODO: decide how to choose a callsite successor, if we did this should the successors be considered events earlier on?
 //				// what if the callsite is a condition/switch statement? there are two or more successors??
 //				// what if callsite is a control flow exit? the successor is the master exit
@@ -192,6 +196,7 @@ public class IPCG {
 //					Edge ipcgEdge = getOrCreateIPCGEdge(pcg.getMasterExit(), callsiteSuccessor);
 //					ipcgEdges.add(ipcgEdge);
 //				}
+				}
 			}
 		}
 		
@@ -206,8 +211,14 @@ public class IPCG {
 		// create the resulting graph
 		Q ipcg = Common.toQ(new UncheckedGraph(resultNodes, resultEdges));
 		
+		// PCGs with CallSites to unexpanded functions already have edges for interprocedural control.
+		// Only include Method-level Call edges between unexpanded functions and from unexpanded to expanded functions.
+		Q expandedSubgraph = expandedFunctions.induce(ipcgCallGraph);
+		Q toUnexpanded = expandedFunctions.forwardStepOn(ipcgCallGraph);
+		Q ipcgCall2 = ipcgCallGraph.differenceEdges(expandedSubgraph.union(toUnexpanded));
+		
 		// return the ipcg with the call graph
-		return ipcg.union(ipcgCallGraph);
+		return ipcg.union(ipcgCall2);
 	}
 	
 	public static Q getFunctionsContainingEvents(Q events){
