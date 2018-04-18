@@ -21,7 +21,8 @@ import com.ensoftcorp.open.pcg.common.PCG.PCGNode;
 
 public class PCGHighlighter {
 
-	public static final Color pcgEvent = java.awt.Color.CYAN;
+	public static final Color pcgExplicitEvent = new java.awt.Color(255, 253, 40); // selection color
+	public static final Color pcgImplicitEvent = java.awt.Color.CYAN;
 	public static final Color ipcgMaster = java.awt.Color.GRAY;
 	
 	public static IMarkup getPCGMarkup(Q events) {
@@ -53,12 +54,12 @@ public class PCGHighlighter {
 		m.setEdge(pcgBackEdges, MarkupProperty.EDGE_COLOR, Color.BLUE.darker());
 		
 		// color events (this should override previous settings)
-		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
+		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, Color.CYAN);
 		
 		return m;
 	}
 	
-	public static IMarkup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
+	public static Markup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Markup m = new Markup();
 
@@ -89,8 +90,8 @@ public class PCGHighlighter {
 		
 		// color the events and implicit callsite events (this should override previous settings)
 		Q implicitCallsiteEvents = Common.toQ(IPCG.getImplicitCallsiteEvents(events, selectedAncestors, selectedExpansions));
-		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
-		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, pcgEvent);
+		m.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, pcgExplicitEvent);
+		m.setNode(implicitCallsiteEvents, MarkupProperty.NODE_BACKGROUND_COLOR, pcgImplicitEvent);
 		
 		return m;
 	}
