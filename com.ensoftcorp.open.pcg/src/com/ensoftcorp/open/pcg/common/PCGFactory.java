@@ -636,7 +636,22 @@ public class PCGFactory {
 					assertConditionValues(successorEdges);
 					// unlike the boolean edges, do not merge
 				} else {
-					// unexpected 
+					// unexpected case...
+					// one case that could end up here is (case 45934)
+					// the previous node.taggedWith(XCSG.ControlFlowSwitchCondition) is not strong
+					// enough to catch statements between switch conditions and case statements
+					//    switch (expr) {
+					//    //  <trouble>
+					//    // i has automatic storage, but the initialization is dead, as is the call to f()
+					//    int i = 4;
+					//    f(i);
+					//        //  </trouble>
+					//    case 0:
+					//        i = 17;
+					//        /* no break */
+					//    default:
+					//        printf("%d\n", i);
+					//    }
 					throw new RuntimeException("Unhandled case for merging duplicate edges at node: " + node); //$NON-NLS-1$
 				}
 			}
