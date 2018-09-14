@@ -452,8 +452,8 @@ public class PCGFactory {
 		
 		// always calculate on demand and in a sandbox because pcg could be
 		// calculated on a subset of the CFG
-		SandboxGraph domFrontier = DominanceAnalysis.computeSandboxedDominanceFrontier(sandbox, ucfg);
-		this.events = getImpliedEvents(sandbox, domFrontier, masterEntry, masterExit, sandbox.nodes(events));
+		SandboxGraph domTree = DominanceAnalysis.computeSandboxedDominatorTree(sandbox, ucfg);
+		this.events = getImpliedEvents(sandbox, domTree, masterEntry, masterExit, sandbox.nodes(events));
 		
 		// the pcg starts as the whole cfg with master entry/exit
 		this.pcg = sucfg;
@@ -687,10 +687,11 @@ public class PCGFactory {
 	 * @return The set of event nodes that need to be retained in the final PCG, 
 	 * including implicit, explicit and start/exit nodes.
 	 */
-	private SandboxHashSet<SandboxNode> getImpliedEvents(Sandbox sandbox, SandboxGraph domFrontier, SandboxNode ucfgEntry, SandboxNode ucfgExit, SandboxHashSet<SandboxNode> explicitEvents) {
+	private SandboxHashSet<SandboxNode> getImpliedEvents(Sandbox sandbox, SandboxGraph domTree, SandboxNode ucfgEntry, SandboxNode ucfgExit, SandboxHashSet<SandboxNode> explicitEvents) {
 		// get the dominance frontier within the function
 		SandboxHashSet<SandboxNode> impliedEvents = new SandboxHashSet<SandboxNode>(sandbox);
-		impliedEvents.addAll(domFrontier.forward(explicitEvents).nodes());
+		impliedEvents.addAll(explicitEvents);
+		impliedEvents.addAll(domTree.forward(explicitEvents).nodes(XCSG.ControlFlowCondition));
 		
 		// add entry and exit nodes as event nodes as well
 		impliedEvents.add(ucfgEntry);
