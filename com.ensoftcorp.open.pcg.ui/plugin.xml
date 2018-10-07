@@ -17,9 +17,9 @@
    <extension point="org.eclipse.ui.views">
       <view
             category="com.ensoftcorp.open.commons.views.categories.toolbox"
-            class="com.ensoftcorp.open.pcg.ui.PCGBuilderView"
+            class="com.ensoftcorp.open.pcg.ui.builder.PCGBuilderView"
             icon="icons/toolbox.gif"
-            id="com.ensoftcorp.open.pcg.ui.pcgBuilderView"
+            id="com.ensoftcorp.open.pcg.ui.builder.pcgBuilderView"
             name="PCG Builder">
       </view>
    </extension>
@@ -28,9 +28,9 @@
    <extension point="org.eclipse.ui.views">
       <view
             category="com.ensoftcorp.open.commons.views.categories.toolbox"
-            class="com.ensoftcorp.open.pcg.ui.PCGLogView"
+            class="com.ensoftcorp.open.pcg.ui.builder.PCGLogView"
             icon="icons/toolbox.gif"
-            id="com.ensoftcorp.open.pcg.ui.pcgLogView"
+            id="com.ensoftcorp.open.pcg.ui.builder.pcgLogView"
             name="PCG Log">
       </view>
    </extension>
