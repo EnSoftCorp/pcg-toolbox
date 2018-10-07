@@ -9,54 +9,5 @@
 	         class="com.ensoftcorp.open.pcg.preferences.PCGPreferences">
 	   </initializer>
 	</extension>
-   
-   <!-- create a preferences page item for pcg toolbox -->
-   <extension
-         point="org.eclipse.ui.preferencePages">
-      <page
-            class="com.ensoftcorp.open.pcg.ui.PCGPreferencesPage"
-            id="com.ensoftcorp.open.pcg.ui.preferences"
-            name="Projected Control Graph (PCG)"
-            category="com.ensoftcorp.open.commons.ui.toolbox.preferences">
-      </page>
-   </extension>
-   
-   <!-- Add the PCG Builder view -->
-   <extension
-         point="org.eclipse.ui.views">
-      <view
-            category="com.ensoftcorp.open.commons.views.categories.toolbox"
-            class="com.ensoftcorp.open.pcg.ui.PCGBuilderView"
-            icon="icons/toolbox.gif"
-            id="com.ensoftcorp.open.pcg.ui.pcgBuilderView"
-            name="PCG Builder">
-      </view>
-   </extension>
-   
-   <!-- Add the PCG Log view -->
-   <extension
-         point="org.eclipse.ui.views">
-      <view
-            category="com.ensoftcorp.open.commons.views.categories.toolbox"
-            class="com.ensoftcorp.open.pcg.ui.PCGLogView"
-            icon="icons/toolbox.gif"
-            id="com.ensoftcorp.open.pcg.ui.pcgLogView"
-            name="PCG Log">
-      </view>
-   </extension>
-   
-   <!-- Add the PCG Smart Views -->
-   <extension
-         point="com.ensoftcorp.atlas.ui.smartViewScript">
-      <script
-            class="com.ensoftcorp.open.pcg.ui.smart.PCGSmartView">
-      </script>
-      <script
-            class="com.ensoftcorp.open.pcg.ui.smart.ExceptionalPCGSmartView">
-      </script>
-      <script
-            class="com.ensoftcorp.open.pcg.ui.smart.PCGSliceSmartView">
-      </script>
-   </extension>
 
 </plugin>

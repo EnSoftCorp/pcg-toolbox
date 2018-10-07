@@ -54,6 +54,10 @@ SOFTWARE.
 
    <requires>
       <import plugin="com.ensoftcorp.open.commons" version="3.3.7" match="greaterOrEqual"/>
+      <import plugin="org.json.simple" version="1.1.0" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.slice" version="3.3.7" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.commons.ui" version="3.3.7" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.pcg" version="3.3.8" match="greaterOrEqual"/>
    </requires>
 
    <plugin
@@ -65,6 +69,13 @@ SOFTWARE.
 
    <plugin
          id="org.json.simple"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="com.ensoftcorp.open.pcg.ui"
          download-size="0"
          install-size="0"
          version="0.0.0"
