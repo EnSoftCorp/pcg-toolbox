@@ -14,6 +14,7 @@ import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
@@ -228,7 +229,7 @@ public class PCGFactory {
 //			}
 //			
 //			// alternatively
-////			AtlasSet<Node> outerLoops = Common.universe().edges(XCSG.LoopChild).reverse(cfg.nodes(XCSG.Loop)).roots().eval().nodes();
+////			AtlasSet<Node> outerLoops = Query.universe().edges(XCSG.LoopChild).reverse(cfg.nodes(XCSG.Loop)).roots().eval().nodes();
 ////			ArrayList<Node> sortedOuterLoops = new ArrayList<Node>();
 ////			for(Node outerLoop : outerLoops){
 ////				sortedOuterLoops.add(outerLoop);
@@ -409,7 +410,7 @@ public class PCGFactory {
 
 		/** find a compatible PCG Edge with respect to adjacent nodes and XCSG.conditionValue */
 		private Edge findPCGEdge(SandboxEdge sandboxEdge, Node from, Node to) {
-			Q pcgEdges = Common.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.PCGEdge);
+			Q pcgEdges = Query.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.PCGEdge);
 			AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
 			boolean hasAttr = sandboxEdge.hasAttr(XCSG.conditionValue);
 			Object cv = sandboxEdge.getAttr(XCSG.conditionValue);

@@ -45,7 +45,7 @@ import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.commons.utilities.DisplayUtils;
+import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
 import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerView;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
@@ -442,7 +442,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 					
 					// expand search to control flow nodes that correspond to this node
 					if(controlFlowNodes.isEmpty()){
-						controlFlowNodes = Common.toQ(selection).containers().nodesTaggedWithAny(XCSG.ControlFlow_Node).eval().nodes();
+						controlFlowNodes = Common.toQ(selection).containers().nodes(XCSG.ControlFlow_Node).eval().nodes();
 					}
 					
 					if(controlFlowNodes.isEmpty()){

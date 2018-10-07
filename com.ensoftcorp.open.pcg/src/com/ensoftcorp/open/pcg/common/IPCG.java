@@ -10,6 +10,7 @@ import com.ensoftcorp.atlas.core.db.graph.UncheckedGraph;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CallSiteAnalysis;
@@ -30,7 +31,7 @@ public class IPCG {
 		Q eventFunctions = getFunctionsContainingEvents(events);
 		Q ipcgCallGraph = getIPCGCallGraph(eventFunctions, Common.empty());
 		Q ipcgFunctions = ipcgCallGraph.retainNodes();
-		Q callEdges = Common.universe().edges(XCSG.Call);
+		Q callEdges = Query.universe().edges(XCSG.Call);
 		return callEdges.reverse(ipcgFunctions).difference(ipcgFunctions);
 	}
 	
@@ -60,7 +61,7 @@ public class IPCG {
 			Q expandedFunctionControlFlowNodes = Common.toQ(expandedFunction).contained().nodes(XCSG.ControlFlow_Node);
 			AtlasSet<Node> expandedFunctionEvents = new AtlasHashSet<Node>();
 			expandedFunctionEvents.addAll(expandedFunctionControlFlowNodes.intersection(events).eval().nodes());
-			Q expandedFunctionCallsitesCF = Common.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
+			Q expandedFunctionCallsitesCF = Query.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
@@ -111,7 +112,7 @@ public class IPCG {
 			}
 			AtlasSet<Node> expandedFunctionEvents = new AtlasHashSet<Node>();
 			expandedFunctionEvents.addAll(expandedFunctionControlFlowNodes.intersection(events).eval().nodes());
-			Q expandedFunctionCallsitesCF = Common.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
+			Q expandedFunctionCallsitesCF = Query.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
@@ -131,7 +132,7 @@ public class IPCG {
 		// to the callsite target's pcg master entry
 		for(Node expandedFunction : expandedFunctions.eval().nodes()){
 			Q expandedFunctionControlFlowNodes = Common.toQ(expandedFunction).contained().nodes(XCSG.ControlFlow_Node);
-			Q expandedFunctionCallsitesCF = Common.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
+			Q expandedFunctionCallsitesCF = Query.universe().nodes(XCSG.CallSite).parent().intersection(expandedFunctionControlFlowNodes);
 			for(Node expandedFunctionCallsiteCF : expandedFunctionCallsitesCF.eval().nodes()){
 				Q expandedFunctionCallsites  = Common.toQ(expandedFunctionCallsiteCF).children().nodes(XCSG.CallSite);
 				for(Node expandedFunctionCallsite : expandedFunctionCallsites.eval().nodes()){
@@ -173,7 +174,7 @@ public class IPCG {
 			// add in one step of containment
 			// this is because some relationships are summarized as call edges and produce disjoint graphs
 			// if we don't include structural relationships at least up to the function level
-			Q containedPCG = pcg.getPCG().union(Common.universe().edges(XCSG.Contains).reverseStep(pcg.getPCG()));
+			Q containedPCG = pcg.getPCG().union(Query.universe().edges(XCSG.Contains).reverseStep(pcg.getPCG()));
 			Graph pcgG = containedPCG.eval();
 			resultEdges.addAll(pcgG.edges());
 			resultNodes.addAll(pcgG.nodes());
@@ -191,7 +192,7 @@ public class IPCG {
 //				// TODO: decide how to choose a callsite successor, if we did this should the successors be considered events earlier on?
 //				// what if the callsite is a condition/switch statement? there are two or more successors??
 //				// what if callsite is a control flow exit? the successor is the master exit
-//				Q controlFlowEdges = exceptionalControlFlow ? Common.universe().edges(XCSG.ControlFlow_Edge) : Common.universe().edges(XCSG.ControlFlow_Edge, XCSG.ExceptionalControlFlow_Edge);
+//				Q controlFlowEdges = exceptionalControlFlow ? Query.universe().edges(XCSG.ControlFlow_Edge) : Query.universe().edges(XCSG.ControlFlow_Edge, XCSG.ExceptionalControlFlow_Edge);
 //				for(Node callsiteSuccessor : controlFlowEdges.successors(Common.toQ(callsite)).eval().nodes()){
 //					Edge ipcgEdge = getOrCreateIPCGEdge(pcg.getMasterExit(), callsiteSuccessor);
 //					ipcgEdges.add(ipcgEdge);
@@ -227,7 +228,7 @@ public class IPCG {
 	}
 	
 	public static Q getIPCGCallGraph(Q eventFunctions, Q selectedAncestors){
-		Q callEdges = Common.universe().edges(XCSG.Call);
+		Q callEdges = Query.universe().edges(XCSG.Call);
 		selectedAncestors = callEdges.reverse(eventFunctions).intersection(selectedAncestors);
 		Q ipcgFunctions = eventFunctions.union(selectedAncestors);
 		Q ipcgCallGraph = ipcgFunctions.union(callEdges.between(ipcgFunctions, ipcgFunctions));
@@ -242,7 +243,7 @@ public class IPCG {
 			throw new IllegalArgumentException("to is null");
 		}
 		
-		Q pcgEdges = Common.universe().edgesTaggedWithAny(IPCGEdge.InterproceduralPCGEdge).betweenStep(Common.toQ(from), Common.toQ(to));
+		Q pcgEdges = Query.universe().edges(IPCGEdge.InterproceduralPCGEdge).betweenStep(Common.toQ(from), Common.toQ(to));
 		if (pcgEdges.eval().edges().isEmpty()) {
 			Edge intermediateEdge = Graph.U.createEdge(from, to);
 			intermediateEdge.tag(IPCGEdge.InterproceduralPCGEdge);

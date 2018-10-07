@@ -21,6 +21,7 @@ import com.ensoftcorp.atlas.core.db.graph.UncheckedGraph;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
@@ -255,7 +256,7 @@ public class PCG {
 	 */
 	public static Set<PCG> loadAll() {
 		Set<PCG> pcgs = new HashSet<PCG>();
-		for(Node masterEntry : Common.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes()){
+		for(Node masterEntry : Query.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes()){
 			for(Object instance : PCG.getInstances(masterEntry)){
 				JSONObject json = (JSONObject) instance;
 				pcgs.add(decodePCGInstance(json));
@@ -294,7 +295,7 @@ public class PCG {
 	 * Purges all records of PCGs from the Atlas graph
 	 */
 	public static void deleteAll(){
-		for(Node masterEntry : new AtlasHashSet<Node>(Common.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes())){
+		for(Node masterEntry : new AtlasHashSet<Node>(Query.universe().nodes(PCG.PCGNode.PCGMasterEntry).eval().nodes())){
 			masterEntry.attr().remove(PCGInstances);
 		}
 	}

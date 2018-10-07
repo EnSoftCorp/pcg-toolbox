@@ -3,7 +3,7 @@ package com.ensoftcorp.open.pcg.ui.smart;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
-import com.ensoftcorp.atlas.core.script.Common;
+import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.StyledResult;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.atlas.ui.scripts.selections.AtlasSmartViewScript;
@@ -71,7 +71,7 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		Q pcg = PCGFactory.create(cfg, events, true).getPCG();
 		
 		// need to union in the contains edges because they are not contained in the default index
-		pcg = pcg.union(Common.universe().edges(XCSG.Contains).reverse(pcg));
+		pcg = pcg.union(Query.universe().edges(XCSG.Contains).reverse(pcg));
 		
 		return new StyledResult(pcg, PCGHighlighter.getPCGMarkup(events));
 	}
@@ -102,8 +102,8 @@ public class PCGSmartView extends FilteringAtlasSmartViewScript implements Atlas
 		}
 
 		public static ControlFlowSelection processSelection(Q filteredSelection) {
-			Q selectedDataFlow = filteredSelection.nodesTaggedWithAny(XCSG.DataFlow_Node);
-			Q selectedControlFlow = filteredSelection.nodesTaggedWithAny(XCSG.ControlFlow_Node);		
+			Q selectedDataFlow = filteredSelection.nodes(XCSG.DataFlow_Node);
+			Q selectedControlFlow = filteredSelection.nodes(XCSG.ControlFlow_Node);		
 			Q impliedControlFlow = selectedControlFlow.union(selectedDataFlow.parent());
 			return new ControlFlowSelection(selectedControlFlow, impliedControlFlow);
 		}

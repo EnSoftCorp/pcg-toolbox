@@ -64,7 +64,7 @@ public class PCGHighlighter {
 		Markup m = new Markup();
 
 		// gray and dot the call edges
-		Q callEdges = Common.universe().edges(XCSG.Call).retainEdges();
+		Q callEdges = Query.universe().edges(XCSG.Call).retainEdges();
 		m.setEdge(callEdges, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
 		
 		// highlight the IPCG root function red
@@ -75,14 +75,14 @@ public class PCGHighlighter {
 		// highlight the master entry/exit nodes of root function red
 		Q ipcgCallGraphRootMasterNodes = ipcgCallGraphRoots.children().nodes(PCGNode.PCGMasterEntry, PCGNode.PCGMasterExit);
 		// alternatively it could be disconnected, so just grab them by traversing the functions CFG
-		Q eventFlowEdges = Common.universe().edges(PCGEdge.PCGEdge);
+		Q eventFlowEdges = Query.universe().edges(PCGEdge.PCGEdge);
 		Q functionCFG = CommonQueries.cfg(ipcgCallGraphRootMasterNodes);
 		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.predecessors(functionCFG).nodes(PCGNode.PCGMasterEntry));
 		ipcgCallGraphRootMasterNodes = ipcgCallGraphRootMasterNodes.union(eventFlowEdges.successors(functionCFG).nodes(PCGNode.PCGMasterExit));
 		m.setNode(ipcgCallGraphRootMasterNodes, MarkupProperty.NODE_BACKGROUND_COLOR, ipcgMaster);
 
 		// treat event flow edges as control flow edges
-		Q cfEdge = Query.universe().edgesTaggedWithAny(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCGEdge);
+		Q cfEdge = Query.universe().edges(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCGEdge);
 		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
 		
 		// highlight control flow edges

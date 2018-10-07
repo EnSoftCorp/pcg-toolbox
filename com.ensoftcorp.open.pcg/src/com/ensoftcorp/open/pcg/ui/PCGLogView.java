@@ -27,7 +27,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
-import com.ensoftcorp.open.commons.utilities.DisplayUtils;
+import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
 import com.ensoftcorp.open.pcg.common.PCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 

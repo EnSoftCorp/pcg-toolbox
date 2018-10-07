@@ -2,7 +2,7 @@
 <feature
       id="com.ensoftcorp.open.pcg.feature"
       label="PCG Toolbox"
-      version="3.3.0.qualifier"
+      version="3.3.7.qualifier"
       provider-name="EnSoft Corp.">
 
    <description url="https://ensoftcorp.github.io/pcg-toolbox">
@@ -53,7 +53,7 @@ SOFTWARE.
          version="0.0.0"/>
 
    <requires>
-      <import plugin="com.ensoftcorp.open.commons" version="3.3.0" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.commons" version="3.3.7" match="greaterOrEqual"/>
    </requires>
 
    <plugin
