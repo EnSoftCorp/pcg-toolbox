@@ -8,7 +8,6 @@ import java.util.Set;
 import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
-import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.NodeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
@@ -480,8 +479,7 @@ public class PCGFactory {
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
 		SandboxHashSet<SandboxEdge> pcgEdgeSet = new SandboxHashSet<SandboxEdge>(sandbox.getInstanceID());
 		for (SandboxEdge edge : pcg.edges()) {
-			if (pcg.nodes().contains(edge.getNode(EdgeDirection.FROM)) 
-					&& pcg.nodes().contains(edge.getNode(EdgeDirection.TO))) {
+			if (pcg.nodes().contains(edge.from()) && pcg.nodes().contains(edge.to())) {
 				pcgEdgeSet.add(edge);
 			}
 		}
@@ -599,7 +597,7 @@ public class PCGFactory {
 		// group out edges by successor
 		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
 		for (SandboxEdge outEdge : outEdges) {
-			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
+			SandboxNode successor = outEdge.to();
 			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
 			if (nodeEdgeMap.containsKey(successor)) {
 				edges = nodeEdgeMap.get(successor);
