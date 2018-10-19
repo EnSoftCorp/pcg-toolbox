@@ -22,6 +22,7 @@ import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
 import com.ensoftcorp.atlas.core.db.set.AtlasSet;
 import com.ensoftcorp.atlas.core.query.Q;
 import com.ensoftcorp.atlas.core.script.Common;
+import com.ensoftcorp.atlas.ui.viewer.graph.DisplayUtil;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitInterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.xcsg.XCSG_Extension;
@@ -478,6 +479,7 @@ public class ICFGPCG {
 	 * @return
 	 */
 	public Q getICFGPCG(){
+//		DisplayUtil.displayGraph(Common.toQ(icfgpcg).eval());
 		return Common.toQ(icfgpcg);
 	}
 
