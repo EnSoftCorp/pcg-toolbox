@@ -48,6 +48,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.ICFG;
 import com.ensoftcorp.open.commons.algorithms.InterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
+import com.ensoftcorp.open.commons.highlighter.CFGHighlighter;
 import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
 import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerView;
 import com.ensoftcorp.open.pcg.common.ICFGPCGFactory;
@@ -492,6 +493,8 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 								Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 								selectedExpansions = selectedExpansions.union(containingFunctions, selectedAncestors);
 								ICFG icfg = InterproceduralControlFlowGraph.icfg(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
+								Markup icfgMarkup = new Markup();
+								CFGHighlighter.applyHighlightsForICFG(icfgMarkup);
 								DisplayUtils.show(icfg.getICFG(), "ICFG");
 								Thread.sleep(200);
 								Q pcgResult = ICFGPCGFactory.create(icfg.getICFG(), events).getICFGPCG();
