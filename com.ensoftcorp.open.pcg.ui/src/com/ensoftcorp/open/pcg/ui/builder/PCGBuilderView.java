@@ -278,9 +278,9 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		};
 		
 		// uncomment to preview with window builder
-		PCGComponents pcg = new PCGComponents("TEST");
-		pcgs.put("TEST", pcg);
-		addPCG(pcgFolder, pcg);
+//		PCGComponents pcg = new PCGComponents("TEST");
+//		pcgs.put("TEST", pcg);
+//		addPCG(pcgFolder, pcg);
 		
 		addPCGAction.setText("New PCG");
 		addPCGAction.setToolTipText("Creates another PCG builder tab");
