@@ -492,10 +492,8 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 								Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 								selectedExpansions = selectedExpansions.union(containingFunctions, selectedAncestors);
 								ICFG icfg = InterproceduralControlFlowGraph.icfg(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
-								
-//								DisplayUtils.show(icfg.getICFG(), "ICFG");
-//								Thread.sleep(1000);
-								
+								DisplayUtils.show(icfg.getICFG(), "ICFG");
+								Thread.sleep(200);
 								Q pcgResult = ICFGPCGFactory.create(icfg.getICFG(), events).getICFGPCG();
 								IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
 								DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
