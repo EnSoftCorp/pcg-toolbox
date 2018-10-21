@@ -492,6 +492,10 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 								Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 								selectedExpansions = selectedExpansions.union(containingFunctions, selectedAncestors);
 								ICFG icfg = InterproceduralControlFlowGraph.icfg(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
+								
+//								DisplayUtils.show(icfg.getICFG(), "ICFG");
+//								Thread.sleep(1000);
+								
 								Q pcgResult = ICFGPCGFactory.create(icfg.getICFG(), events).getICFGPCG();
 								IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
 								DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
@@ -751,9 +755,21 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 	public void selectionChanged(Graph selection) {}
 
 	@Override
-	public void indexBecameUnaccessible() {}
+	public void indexBecameUnaccessible() {
+		for(CTabItem tab : VIEW.pcgFolder.getItems()) {
+			String tabName = tab.getText();
+			pcgs.remove(tabName);
+			tab.dispose();
+		}
+	}
 
 	@Override
-	public void indexBecameAccessible() {}
+	public void indexBecameAccessible() {
+		int PCG_NUMBER = 1;
+		String PCG_NAME = getUniqueName("PCG" + PCG_NUMBER);
+		PCGComponents pcg = new PCGComponents(PCG_NAME);
+		pcgs.put(PCG_NAME, pcg);
+		addPCG(pcgFolder, pcg);
+	}
 	
 }
