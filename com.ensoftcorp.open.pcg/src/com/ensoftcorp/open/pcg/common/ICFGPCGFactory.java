@@ -150,23 +150,23 @@ public class ICFGPCGFactory {
 	 * @param events
 	 * @return PCG
 	 */
-	public static ICFGPCG create(Q cfg, Q events) {
-		return create(cfg, events, false);
+	public static ICFGPCG create(Q icfg, Q events) {
+		return create(icfg, events, false);
 	}
 
 	/**
 	 * Construct the PCGs corresponding to the given events and control flow graph
 	 * 
-	 * @param cfg
+	 * @param icfg
 	 * @param events
 	 * @param labelBackEdges
 	 * @return
 	 */
-	public static ICFGPCG create(Q cfg, Q events, boolean labelBackEdges) {
-		events = events.intersection(cfg).nodes(XCSG.ControlFlow_Node);
-		Q cfRoots = cfg.roots();
-		Q cfExits = cfg.leaves();
-		return create(cfg, cfRoots,cfExits, events, labelBackEdges);
+	public static ICFGPCG create(Q icfg, Q events, boolean labelBackEdges) {
+		events = events.intersection(icfg).nodes(XCSG.ControlFlow_Node);
+		Q cfRoots = icfg.roots();
+		Q cfExits = icfg.leaves();
+		return create(icfg, cfRoots,cfExits, events, labelBackEdges);
 	}
 	
 	/**
@@ -174,13 +174,13 @@ public class ICFGPCGFactory {
 	 * of interest. Note that roots, exits, and events must all be contained
 	 * within the given cfg.
 	 * 
-	 * @param cfg
+	 * @param icfg
 	 * @param function
 	 * @param events
 	 * @return PCG
 	 */
-	public static ICFGPCG create(Q cfg, Q cfRoots, Q cfExits, Q events) {
-		return create(cfg, cfRoots, cfExits, events, false);
+	public static ICFGPCG create(Q icfg, Q cfRoots, Q cfExits, Q events) {
+		return create(icfg, cfRoots, cfExits, events, false);
 	}
 
 	/**

@@ -46,7 +46,6 @@ import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.ICFG;
-import com.ensoftcorp.open.commons.algorithms.InterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.highlighter.CFGHighlighter;
 import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
@@ -486,23 +485,40 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 							Q containingFunctions = Common.toQ(pcg.getContainingFunctions());
 							Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
 							Q selectedFunctions = containingFunctions.union(selectedAncestors);
-							AtlasSet<Node> selectedFunctionRoots = Query.universe().edges(XCSG.Call).between(selectedFunctions, selectedFunctions).roots().eval().nodes();
+							Q connectedFunctions = Query.universe().edges(XCSG.Call).between(selectedFunctions, selectedFunctions);
+							AtlasSet<Node> selectedFunctionRoots = connectedFunctions.roots().eval().nodes();
+							boolean proceed = false;
 							if(selectedFunctionRoots.size() != 1) {
-								DisplayUtils.showError("There must be a single root among all event containing functions and selected ancestor functions.");
+								if(CommonQueries.isEmpty(selectedFunctions.difference(connectedFunctions.retainNodes()))) {
+									// there is no root, but the functions are all connected
+									AtlasSet<Node> selectedFunctionsSet = selectedFunctions.eval().nodes();
+									if(selectedFunctionsSet.size() == 1) {
+										proceed = true;
+										selectedFunctionRoots.add(selectedFunctionsSet.one());
+									}
+								}
 							} else {
+								// there is a single identifiable root
+								proceed = true;
+							}
+							
+							if(proceed) {
 								Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
 								selectedExpansions = selectedExpansions.union(containingFunctions, selectedAncestors);
-								ICFG icfg = InterproceduralControlFlowGraph.icfg(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
+								ICFG icfg = new ICFG(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
+								Q icfgResult = icfg.getICFG();
 								Markup icfgMarkup = new Markup();
 								CFGHighlighter.applyHighlightsForICFG(icfgMarkup);
-								for(Edge icfgEdge : new AtlasHashSet<Edge>(icfg.getICFG().edges(ICFG.ICFGEdge).eval().edges())) {
+								for(Edge icfgEdge : new AtlasHashSet<Edge>(icfgResult.edges(ICFG.ICFGEdge, ICFG.ICFGEntryEdge, ICFG.ICFGExitEdge).eval().edges())) {
 									icfgMarkup.setEdge(Common.toQ(icfgEdge), MarkupProperty.LABEL_TEXT, "CID_" + icfgEdge.getAttr(ICFG.ICFGCallsiteAttribute).toString());
 								}
-								DisplayUtils.show(icfg.getICFG(), icfgMarkup, true, "ICFG");
+								DisplayUtils.show(icfgResult, icfgMarkup, true, (pcg.getName() + "-" + "ICFG"));
 								Thread.sleep(200);
-								Q pcgResult = ICFGPCGFactory.create(icfg.getICFG(), events).getICFGPCG();
+								Q pcgResult = ICFGPCGFactory.create(icfgResult, Common.toQ(icfg.getEntryPointFunctionRoots()), Common.toQ(icfg.getEntryPointFunctionExits()), events).getICFGPCG();
 								IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
 								DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+							} else {
+								DisplayUtils.showError("There must be a single root among all event containing functions and selected ancestor functions.");
 							}
 						}
 					} catch (Throwable t){
