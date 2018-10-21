@@ -59,6 +59,24 @@ public class PCGHighlighter {
 		return m;
 	}
 	
+	public static Markup getIPCGMarkup(Q ipcg, Q events) {
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Markup m = new Markup();
+
+		// gray and dot the call edges
+		Q callEdges = Query.universe().edges(XCSG.Call).retainEdges();
+		m.setEdge(callEdges, MarkupProperty.EDGE_STYLE, MarkupProperty.LineStyle.DASHED_DOTTED);
+		
+		// treat event flow edges as control flow edges
+		Q cfEdge = Query.universe().edges(PCGEdge.PCGEdge, IPCGEdge.InterproceduralPCGEdge);
+		m.setEdge(cfEdge, MarkupProperty.EDGE_COLOR, CFGHighlighter.cfgDefault);
+		
+		// highlight control flow edges
+		CFGHighlighter.applyHighlightsForCFG(m);
+		
+		return m;
+	}
+	
 	public static Markup getIPCGMarkup(Q ipcg, Q events, Q selectedAncestors, Q selectedExpansions) {
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Markup m = new Markup();

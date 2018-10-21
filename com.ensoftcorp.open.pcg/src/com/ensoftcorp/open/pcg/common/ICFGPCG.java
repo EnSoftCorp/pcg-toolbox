@@ -478,6 +478,7 @@ public class ICFGPCG {
 	 * @return
 	 */
 	public Q getICFGPCG(){
+//		DisplayUtil.displayGraph(Common.toQ(icfgpcg).eval());
 		return Common.toQ(icfgpcg);
 	}
 

@@ -8,7 +8,6 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import com.ensoftcorp.open.pcg.preferences.PCGPreferences;
-import com.ensoftcorp.open.pcg.ui.Activator;
 
 /**
  * UI for setting PCG analysis preferences
@@ -27,7 +26,7 @@ public class PCGPreferencesPage extends FieldEditorPreferencePage implements IWo
 
 	@Override
 	public void init(IWorkbench workbench) {
-		IPreferenceStore preferences = Activator.getDefault().getPreferenceStore();
+		IPreferenceStore preferences = PCGPreferences.getPreferenceStore();
 		setPreferenceStore(preferences);
 		setDescription("Configure preferences for the PCG Toolbox plugin.");
 		

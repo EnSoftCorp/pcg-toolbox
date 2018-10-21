@@ -47,6 +47,7 @@ import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
 import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerView;
+import com.ensoftcorp.open.pcg.common.ICFGPCGFactory;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
 public class PCGBuilderView extends GraphSelectionListenerView {
@@ -277,9 +278,9 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		};
 		
 		// uncomment to preview with window builder
-//		PCGComponents pcg = new PCGComponents("TEST");
-//		pcgs.put("TEST", pcg);
-//		addPCG(pcgFolder, pcg);
+		PCGComponents pcg = new PCGComponents("TEST");
+		pcgs.put("TEST", pcg);
+		addPCG(pcgFolder, pcg);
 		
 		addPCGAction.setText("New PCG");
 		addPCGAction.setToolTipText("Creates another PCG builder tab");
@@ -303,7 +304,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		
 		Composite pcgControlPanelComposite = new Composite(pcgComposite, SWT.NONE);
 		pcgControlPanelComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
-		pcgControlPanelComposite.setLayout(new GridLayout(5, false));
+		pcgControlPanelComposite.setLayout(new GridLayout(6, false));
 		
 		Label pcgNameLabel = new Label(pcgControlPanelComposite, SWT.NONE);
 		pcgNameLabel.setSize(66, 14);
@@ -334,6 +335,10 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				pcg.setExceptionalControlFlow(exceptionalControlFlowCheckbox.getSelection());
 			}
 		});
+		
+		final Button humanConsumerCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+		humanConsumerCheckbox.setSelection(true);
+		humanConsumerCheckbox.setText("Human Consumer");
 		
 		extendStructureCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
 		extendStructureCheckbox.setSelection(true);
@@ -467,11 +472,17 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				} else {
 					try {
 						Q events = Common.toQ(pcg.getControlFlowEvents());
-						Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
-						Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
-						Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
-						IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
-						DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+						if(humanConsumerCheckbox.getSelection()) {
+							Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
+							Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
+							Q pcgResult = IPCG.getIPCG(events, selectedAncestors, selectedExpansions, exceptionalControlFlowCheckbox.getSelection());
+							IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
+							DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+						} else {
+							Q pcgResult = ICFGPCGFactory.create(events).getICFGPCG();
+							IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
+							DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+						}
 					} catch (Throwable t){
 						DisplayUtils.showError(t, "An error occurred while constructing the IPCG.");
 					}
