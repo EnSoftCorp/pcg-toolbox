@@ -1,5 +1,6 @@
 package com.ensoftcorp.open.pcg.common;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,6 +19,7 @@ import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
+import com.ensoftcorp.open.commons.algorithms.ICFG;
 import com.ensoftcorp.open.commons.algorithms.LoopIdentification;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitInterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
@@ -578,13 +580,86 @@ public class ICFGPCGFactory {
 	 */
 	private void connectToSuccessors(SandboxEdge inEdge, Set<SandboxNode> successors) {
 		SandboxNode predecessor = inEdge.from();
-		for (SandboxNode successor : successors) {
-			this.getOrCreatePCGEdge(predecessor, successor, inEdge.getAttr(XCSG.conditionValue));
+		
+		// handle inter-procedural edges
+		if(inEdge.taggedWith(ICFG.ICFGEdge)) {
+			if(inEdge.taggedWith(ICFG.ICFGEntryEdge)) {
+				for (SandboxNode successor : successors) {
+					this.getOrCreateIPCGEdge(predecessor, successor, ICFG.ICFGEntryEdge);
+				}
+			} else if(inEdge.taggedWith(ICFG.ICFGExitEdge)) {
+				for (SandboxNode successor : successors) {
+					this.getOrCreateIPCGEdge(predecessor, successor, ICFG.ICFGExitEdge);
+				}
+			}
+			
+			this.mergeInterproceduralEdges(predecessor);
+		} else {
+			// regular intra-procedural edges
+			for (SandboxNode successor : successors) {
+				this.getOrCreatePCGEdge(predecessor, successor, inEdge.getAttr(XCSG.conditionValue));
+			}
+			
+			// merge (boolean) edges
+			this.mergeEdges(predecessor);
 		}
-		// merge (boolean) edges
-		this.mergeEdges(predecessor);
 	}
 	
+	/**
+	 * Merge the callsite ids
+	 * @param predecessor
+	 */
+	private void mergeInterproceduralEdges(SandboxNode node) {
+		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
+		if (outEdges.size() < 2){
+			return;
+		}
+		
+		// group out edges by successor
+		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
+		for (SandboxEdge outEdge : outEdges) {
+			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
+			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
+			if (nodeEdgeMap.containsKey(successor)) {
+				edges = nodeEdgeMap.get(successor);
+			}
+			edges.add(outEdge);
+			nodeEdgeMap.put(successor, edges);
+		}
+		
+		for (SandboxNode successor : nodeEdgeMap.keySet()) {
+			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
+			// successors with in degree > 1 
+			if (successorEdges.size() > 1){
+				if (node.taggedWith(XCSG.controlFlowExitPoint)) {
+					SandboxEdge mergedEdge = this.getOrCreateIPCGEdge(node, successor, ICFG.ICFGExitEdge);
+
+					// merge the callsite ids
+					ArrayList<String> mergedCallsiteIDs = new ArrayList<String>();
+					for(SandboxEdge edge : successorEdges) {
+						if(edge.hasAttr(ICFG.ICFGCallsiteAttribute)) {
+							String callsiteIDs = edge.getAttr(ICFG.ICFGCallsiteAttribute).toString();
+							for(String callsiteID : callsiteIDs.split(",")) {
+								mergedCallsiteIDs.add(callsiteID);
+							}
+						}
+					}
+					if(!mergedCallsiteIDs.isEmpty()) {
+						String mergedCallsiteIDString = mergedCallsiteIDs.toString().replaceAll("\\s","").replace("[","").replace("]","");
+						mergedEdge.putAttr(ICFG.ICFGCallsiteAttribute, mergedCallsiteIDString);
+						mergedEdge.putAttr(XCSG.name, "CID_" + mergedCallsiteIDString);
+					}
+					
+					// remove the edges which have been replaced (but not the one representing the merged paths) 
+					successorEdges.remove(mergedEdge);
+					pcg.edges().removeAll(successorEdges);
+				} else {
+					throw new RuntimeException("Unhandled case for merging duplicate inter-procedural edges at node: " + node); //$NON-NLS-1$
+				}
+			}
+		}
+	}
+
 	/**
 	 * Merge conditional edges.
 	 * 
@@ -630,7 +705,7 @@ public class ICFGPCGFactory {
 					// assert: duplicate values of XCSG.conditionValue should be impossible because of getOrCreate
 					assertConditionValues(successorEdges);
 					SandboxEdge mergedEdge = this.getOrCreatePCGEdge(node, successor, null);
-					
+
 					// remove the edges which have been replaced (but not the one representing the merged paths) 
 					successorEdges.remove(mergedEdge);
 					pcg.edges().removeAll(successorEdges);
@@ -701,6 +776,41 @@ public class ICFGPCGFactory {
 		impliedEvents.add(uicfgExit);
 		
 		return impliedEvents;
+	}
+	
+	/**
+	 * Finds or creates a edge in the PCG between the specified nodes with the tag type.
+	 * 
+	 * @param from predecessor
+	 * @param to successor
+	 * @param conditionValue the conditionValue, or null on unconditional edges
+	 * @return the edge
+	 */
+	private SandboxEdge getOrCreateIPCGEdge(SandboxNode from, SandboxNode to, String tag) {
+		
+		SandboxHashSet<SandboxEdge> edges = pcg.edges(from, NodeDirection.OUT);
+		
+		// find match
+		for (SandboxEdge edge : edges) {
+			if (!to.equals(edge.to())) {
+				continue;
+			}
+			if (edge.taggedWith(tag)) {
+				// looking for an edge with the tag
+				return edge;
+			}
+		}
+		
+		// assert: no match
+		
+		// create a new edge
+		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
+		pcgEdge.tag(XCSG.Edge);
+		pcgEdge.tag(PCGEdge.PCGEdge);
+		pcgEdge.tag(tag);
+		
+		pcg.edges().add(pcgEdge);
+		return pcgEdge;
 	}
 	
 	/**

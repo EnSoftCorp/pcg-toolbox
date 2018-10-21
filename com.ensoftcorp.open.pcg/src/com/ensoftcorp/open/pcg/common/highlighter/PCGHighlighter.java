@@ -59,6 +59,24 @@ public class PCGHighlighter {
 		return m;
 	}
 	
+	public static Markup getICFGPCGMarkup(Q icfgpcg, Q events) {
+		events = events.nodes(XCSG.ControlFlow_Node);
+		Markup m = new Markup();
+
+		// highlight control flow edges
+		CFGHighlighter.applyHighlightsForICFG(m);
+		
+//		Q icfgEntryEdges = icfgpcg.edges(ICFG.ICFGEntryEdge);
+//		m.setEdge(icfgEntryEdges, MarkupProperty.EDGE_COLOR, Color.BLACK);
+//		m.setEdge(icfgEntryEdges, MarkupProperty.EDGE_STYLE, LineStyle.DASHED);
+//		
+//		Q icfgExitEdges = icfgpcg.edges(ICFG.ICFGExitEdge);
+//		m.setEdge(icfgExitEdges, MarkupProperty.EDGE_COLOR, Color.GRAY);
+//		m.setEdge(icfgExitEdges, MarkupProperty.EDGE_STYLE, LineStyle.DASHED);
+		
+		return m;
+	}
+	
 	public static Markup getIPCGMarkup(Q ipcg, Q events) {
 		events = events.nodes(XCSG.ControlFlow_Node);
 		Markup m = new Markup();
