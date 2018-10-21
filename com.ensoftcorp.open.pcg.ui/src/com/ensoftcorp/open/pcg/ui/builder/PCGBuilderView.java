@@ -42,8 +42,11 @@ import com.ensoftcorp.atlas.core.markup.IMarkup;
 import com.ensoftcorp.atlas.core.markup.Markup;
 import com.ensoftcorp.atlas.core.markup.MarkupProperty;
 import com.ensoftcorp.atlas.core.query.Q;
+import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
+import com.ensoftcorp.open.commons.algorithms.ICFG;
+import com.ensoftcorp.open.commons.algorithms.InterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.commons.ui.utilities.DisplayUtils;
 import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerView;
@@ -479,9 +482,20 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 							IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events, selectedAncestors, selectedExpansions);
 							DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
 						} else {
-							Q pcgResult = ICFGPCGFactory.create(events).getICFGPCG();
-							IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
-							DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+							Q containingFunctions = Common.toQ(pcg.getContainingFunctions());
+							Q selectedAncestors = Common.toQ(pcg.getIncludedAncestorFunctions());
+							Q selectedFunctions = containingFunctions.union(selectedAncestors);
+							AtlasSet<Node> selectedFunctionRoots = Query.universe().edges(XCSG.Call).between(selectedFunctions, selectedFunctions).roots().eval().nodes();
+							if(selectedFunctionRoots.size() != 1) {
+								DisplayUtils.showError("There must be a single root among all event containing functions and selected ancestor functions.");
+							} else {
+								Q selectedExpansions = Common.toQ(pcg.getExpandedFunctions());
+								selectedExpansions = selectedExpansions.union(containingFunctions, selectedAncestors);
+								ICFG icfg = InterproceduralControlFlowGraph.icfg(selectedFunctionRoots.one(), selectedExpansions.nodes(XCSG.Function).eval().nodes());
+								Q pcgResult = ICFGPCGFactory.create(icfg.getICFG(), events).getICFGPCG();
+								IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
+								DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
+							}
 						}
 					} catch (Throwable t){
 						DisplayUtils.showError(t, "An error occurred while constructing the IPCG.");

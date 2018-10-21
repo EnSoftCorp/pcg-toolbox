@@ -38,6 +38,7 @@ import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
  */
 public class ICFGPCGFactory {
 	
+	// TODO: update these interfaces so that they make sense with ICFGs, passing a simple Q is kind of confusing what is expected
 	/**
 	 * Constructs the PCG corresponding to the given events within the containing control flow graph and returns
 	 * only the nodes in the resulting PCG. 
