@@ -1,6 +1,5 @@
 package com.ensoftcorp.open.pcg.common;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -31,7 +30,6 @@ import com.ensoftcorp.open.commons.sandbox.SandboxGraph;
 import com.ensoftcorp.open.commons.sandbox.SandboxGraphElement;
 import com.ensoftcorp.open.commons.sandbox.SandboxHashSet;
 import com.ensoftcorp.open.commons.sandbox.SandboxNode;
-import com.ensoftcorp.open.pcg.common.PCG.PCGEdge;
 
 /**
  * A class that implements the event flow graph transformations to transform a given CFG into PCG
@@ -352,7 +350,7 @@ public class ICFGPCGFactory {
 					Node to = CommonQueries.getNodeByAddress(sandboxEdge.to().getAddress());
 					
 					Edge edge = null;
-					if(sandboxEdge.tags().contains(PCGEdge.PCGEdge)){
+					if(sandboxEdge.tags().contains(ICFGPCG.ICFGPCGEdge.ICFGPCGEdge)){
 						// only create event flow edges between nodes if one does not already exist
 						edge = findPCGEdge(sandboxEdge, from, to);
 						if (edge == null) {
@@ -414,7 +412,7 @@ public class ICFGPCGFactory {
 
 		/** find a compatible PCG Edge with respect to adjacent nodes and XCSG.conditionValue */
 		private Edge findPCGEdge(SandboxEdge sandboxEdge, Node from, Node to) {
-			Q pcgEdges = Query.universe().edges(XCSG.ControlFlow_Edge, PCGEdge.PCGEdge);
+			Q pcgEdges = Query.universe().edges(XCSG.ControlFlow_Edge, ICFGPCG.ICFGPCGEdge.ICFGPCGEdge);
 			AtlasSet<Edge> betweenEdges = pcgEdges.betweenStep(Common.toQ(from), Common.toQ(to)).eval().edges();
 			boolean hasAttr = sandboxEdge.hasAttr(XCSG.conditionValue);
 			Object cv = sandboxEdge.getAttr(XCSG.conditionValue);
@@ -606,7 +604,7 @@ public class ICFGPCGFactory {
 	}
 	
 	/**
-	 * Merge the callsite ids
+	 * Merge the inter-procedural edges (there are no special conditions, these are just fancy unconditional edges)
 	 * @param predecessor
 	 */
 	private void mergeInterproceduralEdges(SandboxNode node) {
@@ -631,31 +629,11 @@ public class ICFGPCGFactory {
 			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
 			// successors with in degree > 1 
 			if (successorEdges.size() > 1){
-				if (node.taggedWith(XCSG.controlFlowExitPoint)) {
-					SandboxEdge mergedEdge = this.getOrCreateIPCGEdge(node, successor, ICFG.ICFGExitEdge);
-
-					// merge the callsite ids
-					ArrayList<String> mergedCallsiteIDs = new ArrayList<String>();
-					for(SandboxEdge edge : successorEdges) {
-						if(edge.hasAttr(ICFG.ICFGCallsiteAttribute)) {
-							String callsiteIDs = edge.getAttr(ICFG.ICFGCallsiteAttribute).toString();
-							for(String callsiteID : callsiteIDs.split(",")) {
-								mergedCallsiteIDs.add(callsiteID);
-							}
-						}
-					}
-					if(!mergedCallsiteIDs.isEmpty()) {
-						String mergedCallsiteIDString = mergedCallsiteIDs.toString().replaceAll("\\s","").replace("[","").replace("]","");
-						mergedEdge.putAttr(ICFG.ICFGCallsiteAttribute, mergedCallsiteIDString);
-						mergedEdge.putAttr(XCSG.name, "CID_" + mergedCallsiteIDString);
-					}
-					
-					// remove the edges which have been replaced (but not the one representing the merged paths) 
-					successorEdges.remove(mergedEdge);
-					pcg.edges().removeAll(successorEdges);
-				} else {
-					throw new RuntimeException("Unhandled case for merging duplicate inter-procedural edges at node: " + node); //$NON-NLS-1$
-				}
+				SandboxEdge mergedEdge = this.getOrCreateIPCGEdge(node, successor, ICFG.ICFGExitEdge);
+				
+				// remove the edges which have been replaced (but not the one representing the merged paths) 
+				successorEdges.remove(mergedEdge);
+				pcg.edges().removeAll(successorEdges);
 			}
 		}
 	}
@@ -806,7 +784,7 @@ public class ICFGPCGFactory {
 		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(PCGEdge.PCGEdge);
+		pcgEdge.tag(ICFGPCG.ICFGPCGEdge.ICFGPCGEdge);
 		pcgEdge.tag(tag);
 		
 		pcg.edges().add(pcgEdge);
@@ -852,7 +830,7 @@ public class ICFGPCGFactory {
 		// create a new edge
 		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
 		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(PCGEdge.PCGEdge);
+		pcgEdge.tag(ICFGPCG.ICFGPCGEdge.ICFGPCGEdge);
 		if (conditionValue != null){
 			pcgEdge.putAttr(XCSG.conditionValue, conditionValue);
 		}
@@ -864,10 +842,10 @@ public class ICFGPCGFactory {
 	private void labelBackEdges(Graph atlasPCG, Node masterEntry) {
 		LoopIdentification loops = new LoopIdentification(atlasPCG, masterEntry);
 		for (Edge reentryEdge : loops.getReentryEdges()) {
-			reentryEdge.tag(PCG.PCGEdge.PCGReentryEdge);
+			reentryEdge.tag(ICFGPCG.ICFGPCGEdge.ICFGPCGReentryEdge);
 		}
 		for (Edge loopbackEdge : loops.getLoopbacks()) {
-			loopbackEdge.tag(PCG.PCGEdge.PCGBackEdge);
+			loopbackEdge.tag(ICFGPCG.ICFGPCGEdge.ICFGPCGBackEdge);
 		}
 	}
 	
