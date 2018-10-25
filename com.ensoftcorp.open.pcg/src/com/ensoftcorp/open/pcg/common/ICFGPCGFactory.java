@@ -8,7 +8,6 @@ import java.util.Set;
 import com.ensoftcorp.atlas.core.db.graph.Edge;
 import com.ensoftcorp.atlas.core.db.graph.Graph;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement;
-import com.ensoftcorp.atlas.core.db.graph.GraphElement.EdgeDirection;
 import com.ensoftcorp.atlas.core.db.graph.GraphElement.NodeDirection;
 import com.ensoftcorp.atlas.core.db.graph.Node;
 import com.ensoftcorp.atlas.core.db.set.AtlasHashSet;
@@ -18,7 +17,6 @@ import com.ensoftcorp.atlas.core.query.Query;
 import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.atlas.core.xcsg.XCSG;
 import com.ensoftcorp.open.commons.algorithms.DominanceAnalysis;
-import com.ensoftcorp.open.commons.algorithms.ICFG;
 import com.ensoftcorp.open.commons.algorithms.LoopIdentification;
 import com.ensoftcorp.open.commons.algorithms.UniqueEntryExitInterproceduralControlFlowGraph;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
@@ -309,7 +307,7 @@ public class ICFGPCGFactory {
 	
 	/** Sandbox universe.
 	 *  Initialized to CFG, transformed to the PCG
-	 *  Nodes: ControlFlow_Edge, PCGEdge 
+	 *  Nodes: ControlFlow_Edge, ICFGPCGEdge 
 	 *  Edges: ControlFlow_Node, PCGMasterEntry, PCGMasterExit */
 	private SandboxGraph pcg;
 	
@@ -482,8 +480,8 @@ public class ICFGPCGFactory {
 		// create a copy of all the edges that only refer to nodes which are tagged as pcg nodes
 		SandboxHashSet<SandboxEdge> pcgEdgeSet = new SandboxHashSet<SandboxEdge>(sandbox.getInstanceID());
 		for (SandboxEdge edge : pcg.edges()) {
-			if (pcg.nodes().contains(edge.getNode(EdgeDirection.FROM)) 
-					&& pcg.nodes().contains(edge.getNode(EdgeDirection.TO))) {
+			if (pcg.nodes().contains(edge.from()) 
+					&& pcg.nodes().contains(edge.to())) {
 				pcgEdgeSet.add(edge);
 			}
 		}
@@ -578,64 +576,12 @@ public class ICFGPCGFactory {
 	 */
 	private void connectToSuccessors(SandboxEdge inEdge, Set<SandboxNode> successors) {
 		SandboxNode predecessor = inEdge.from();
-		
-		// handle inter-procedural edges
-		if(inEdge.taggedWith(ICFG.ICFGEdge)) {
-			if(inEdge.taggedWith(ICFG.ICFGEntryEdge)) {
-				for (SandboxNode successor : successors) {
-					this.getOrCreateIPCGEdge(predecessor, successor, ICFG.ICFGEntryEdge);
-				}
-			} else if(inEdge.taggedWith(ICFG.ICFGExitEdge)) {
-				for (SandboxNode successor : successors) {
-					this.getOrCreateIPCGEdge(predecessor, successor, ICFG.ICFGExitEdge);
-				}
-			}
-			
-			this.mergeInterproceduralEdges(predecessor);
-		} else {
-			// regular intra-procedural edges
-			for (SandboxNode successor : successors) {
-				this.getOrCreatePCGEdge(predecessor, successor, inEdge.getAttr(XCSG.conditionValue));
-			}
-			
-			// merge (boolean) edges
-			this.mergeEdges(predecessor);
-		}
-	}
-	
-	/**
-	 * Merge the inter-procedural edges (there are no special conditions, these are just fancy unconditional edges)
-	 * @param predecessor
-	 */
-	private void mergeInterproceduralEdges(SandboxNode node) {
-		SandboxHashSet<SandboxEdge> outEdges = pcg.edges(node, NodeDirection.OUT);
-		if (outEdges.size() < 2){
-			return;
+		for (SandboxNode successor : successors) {
+			this.getOrCreatePCGEdge(predecessor, successor, inEdge.getAttr(XCSG.conditionValue));
 		}
 		
-		// group out edges by successor
-		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
-		for (SandboxEdge outEdge : outEdges) {
-			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
-			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
-			if (nodeEdgeMap.containsKey(successor)) {
-				edges = nodeEdgeMap.get(successor);
-			}
-			edges.add(outEdge);
-			nodeEdgeMap.put(successor, edges);
-		}
-		
-		for (SandboxNode successor : nodeEdgeMap.keySet()) {
-			SandboxHashSet<SandboxEdge> successorEdges = nodeEdgeMap.get(successor);
-			// successors with in degree > 1 
-			if (successorEdges.size() > 1){
-				SandboxEdge mergedEdge = this.getOrCreateIPCGEdge(node, successor, ICFG.ICFGExitEdge);
-				
-				// remove the edges which have been replaced (but not the one representing the merged paths) 
-				successorEdges.remove(mergedEdge);
-				pcg.edges().removeAll(successorEdges);
-			}
-		}
+		// merge (boolean) edges
+		this.mergeEdges(predecessor);
 	}
 
 	/**
@@ -654,7 +600,7 @@ public class ICFGPCGFactory {
 		// group out edges by successor
 		HashMap<SandboxNode, SandboxHashSet<SandboxEdge>> nodeEdgeMap = new HashMap<>();
 		for (SandboxEdge outEdge : outEdges) {
-			SandboxNode successor = outEdge.getNode(EdgeDirection.TO);
+			SandboxNode successor = outEdge.to();
 			SandboxHashSet<SandboxEdge> edges = sandbox.emptyEdgeSet();
 			if (nodeEdgeMap.containsKey(successor)) {
 				edges = nodeEdgeMap.get(successor);
@@ -757,41 +703,6 @@ public class ICFGPCGFactory {
 	}
 	
 	/**
-	 * Finds or creates a edge in the PCG between the specified nodes with the tag type.
-	 * 
-	 * @param from predecessor
-	 * @param to successor
-	 * @param conditionValue the conditionValue, or null on unconditional edges
-	 * @return the edge
-	 */
-	private SandboxEdge getOrCreateIPCGEdge(SandboxNode from, SandboxNode to, String tag) {
-		
-		SandboxHashSet<SandboxEdge> edges = pcg.edges(from, NodeDirection.OUT);
-		
-		// find match
-		for (SandboxEdge edge : edges) {
-			if (!to.equals(edge.to())) {
-				continue;
-			}
-			if (edge.taggedWith(tag)) {
-				// looking for an edge with the tag
-				return edge;
-			}
-		}
-		
-		// assert: no match
-		
-		// create a new edge
-		SandboxEdge pcgEdge = sandbox.createEdge(from, to);
-		pcgEdge.tag(XCSG.Edge);
-		pcgEdge.tag(ICFGPCG.ICFGPCGEdge.ICFGPCGEdge);
-		pcgEdge.tag(tag);
-		
-		pcg.edges().add(pcgEdge);
-		return pcgEdge;
-	}
-	
-	/**
 	 * Finds or creates a edge in the PCG between the specified nodes with the conditionValue.
 	 * 
 	 * @param from predecessor
@@ -808,15 +719,15 @@ public class ICFGPCGFactory {
 			if (!to.equals(edge.to())) {
 				continue;
 			}
-			boolean hasAttr = edge.hasAttr(XCSG.conditionValue);
+			boolean hasConditionalAttr = edge.hasAttr(XCSG.conditionValue);
 			if (conditionValue == null) {
 				// looking for an edge WITHOUT the attribute
-				if (!hasAttr) {
+				if (!hasConditionalAttr) {
 					return edge;
 				}
 			} else {
 				// looking for an edge with the same value
-				if (hasAttr) {
+				if (hasConditionalAttr) {
 					Object attr = edge.getAttr(XCSG.conditionValue);
 					if (conditionValue.equals(attr)) {
 						return edge;

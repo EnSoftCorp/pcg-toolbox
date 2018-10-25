@@ -512,10 +512,12 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 								for(Edge icfgEdge : new AtlasHashSet<Edge>(icfgResult.edges(ICFG.ICFGEdge, ICFG.ICFGEntryEdge, ICFG.ICFGExitEdge).eval().edges())) {
 									icfgMarkup.setEdge(Common.toQ(icfgEdge), MarkupProperty.LABEL_TEXT, "CID_" + icfgEdge.getAttr(ICFG.ICFGCallsiteAttribute).toString());
 								}
+								final Color SELECTION_COLOR = new Color(255,253,40);
+								icfgMarkup.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, SELECTION_COLOR);
 								DisplayUtils.show(icfgResult, icfgMarkup, true, (pcg.getName() + "-" + "ICFG"));
-								Thread.sleep(200);
 								Q pcgResult = ICFGPCGFactory.create(icfgResult, Common.toQ(icfg.getEntryPointFunctionRoots()), Common.toQ(icfg.getEntryPointFunctionExits()), events).getICFGPCG();
-								IMarkup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
+								Markup pcgResultMarkup = PCGHighlighter.getIPCGMarkup(pcgResult, events);
+								pcgResultMarkup.setNode(events, MarkupProperty.NODE_BACKGROUND_COLOR, SELECTION_COLOR);
 								DisplayUtils.show(pcgResult, pcgResultMarkup, pcg.isExtendStructureEnabled(), pcg.getName());
 							} else {
 								DisplayUtils.showError("There must be a single root among all event containing functions and selected ancestor functions.");
