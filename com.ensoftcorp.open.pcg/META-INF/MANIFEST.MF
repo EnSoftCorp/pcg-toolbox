@@ -2,11 +2,11 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Projected Control Graph Toolbox
 Bundle-SymbolicName: com.ensoftcorp.open.pcg;singleton:=true
-Bundle-Version: 3.3.7.qualifier
+Bundle-Version: 3.3.8.qualifier
 Bundle-Activator: com.ensoftcorp.open.pcg.Activator
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Require-Bundle: com.ensoftcorp.open.commons;bundle-version="3.3.7",
- com.ensoftcorp.open.slice;bundle-version="3.3.7",
+Require-Bundle: com.ensoftcorp.open.commons;bundle-version="3.3.8",
+ com.ensoftcorp.open.slice;bundle-version="3.3.8",
  org.json.simple;bundle-version="1.1.0"
 Bundle-ActivationPolicy: lazy
 Bundle-Vendor: EnSoft Corp.
