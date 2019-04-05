@@ -441,7 +441,10 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		addControlFlowEventsButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
-				AtlasSet<Node> selection = getSelection().eval().nodes();
+				Q qSelection = getSelection();
+				if (qSelection == null)
+					return; // no codemap
+				AtlasSet<Node> selection = qSelection.eval().nodes();
 				if(selection.isEmpty()){
 					DisplayUtils.showError("Nothing is selected.");
 				} else {
