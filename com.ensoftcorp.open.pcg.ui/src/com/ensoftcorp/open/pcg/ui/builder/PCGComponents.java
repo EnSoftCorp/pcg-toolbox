@@ -8,9 +8,8 @@ import com.ensoftcorp.atlas.core.script.Common;
 import com.ensoftcorp.open.commons.analysis.CommonQueries;
 import com.ensoftcorp.open.pcg.common.IPCG;
 
-public class PCGComponents implements Comparable<PCGComponents> {
+public class PCGComponents {
 	private String name;
-	private long createdAt;
 	private AtlasSet<Node> controlFlowEvents;
 	private AtlasSet<Node> includedAncestors;
 	private AtlasSet<Node> expandedFunctions;
@@ -19,7 +18,6 @@ public class PCGComponents implements Comparable<PCGComponents> {
 
 	public PCGComponents(String name) {
 		this.name = name;
-		this.createdAt = System.currentTimeMillis();
 		this.controlFlowEvents = new AtlasHashSet<Node>();
 		this.includedAncestors = new AtlasHashSet<Node>();
 		this.expandedFunctions = new AtlasHashSet<Node>();
@@ -114,36 +112,6 @@ public class PCGComponents implements Comparable<PCGComponents> {
 	
 	public boolean removeControlFlowEvent(Node controlFlowEvent) {
 		return this.controlFlowEvents.remove(controlFlowEvent);
-	}
-
-	@Override
-	public int compareTo(PCGComponents other) {
-		return Long.compare(this.createdAt, other.createdAt);
-	}
-	
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		PCGComponents other = (PCGComponents) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
 	}
 
 }

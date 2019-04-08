@@ -2,9 +2,11 @@ package com.ensoftcorp.open.pcg.ui.builder;
 
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -53,137 +55,26 @@ import com.ensoftcorp.open.commons.utilities.selection.GraphSelectionListenerVie
 import com.ensoftcorp.open.pcg.common.ICFGPCGFactory;
 import com.ensoftcorp.open.pcg.common.IPCG;
 import com.ensoftcorp.open.pcg.common.highlighter.PCGHighlighter;
+
 public class PCGBuilderView extends GraphSelectionListenerView {
+
+	private static final String DEFAULT_NAME = "PCG ";
 
 	/**
 	 * The ID of the view as specified by the extension.
 	 */
 	public static final String ID = "com.ensoftcorp.open.pcg.ui.pcgBuilderView";
 
-	private static Map<String,PCGComponents> pcgs = new HashMap<String,PCGComponents>();
+	
+	
 	private static PCGBuilderView VIEW;
 	
 	private static boolean initialized = false;
-	private static int pcgCounter = 1;
-	
-	public static class PCGBuilder {
-		public static PCGBuilderComponents get(String name){
-			if(!pcgs.containsKey(name)){
-				pcgCounter++;
-				PCGComponents pcg = new PCGComponents(name);
-				pcgs.put(name, pcg);
-				Display.getDefault().asyncExec(new Runnable(){
-					@Override
-					public void run() {
-						VIEW.addPCG(VIEW.pcgFolder, pcg);
-						VIEW.setFocus(pcg);
-					}
-				});
-			}
-			return new PCGBuilderComponents(name);
-		}
-	}
-	
-	public static class PCGBuilderComponents {
-		private String name;
+	private static int pcgCounter = 0;
+	private static List<PCGComponents> pcgs = new ArrayList<>();
 
-		private PCGBuilderComponents(String name){
-			this.name = name;
-		}
-		
-		public boolean addEvents(Q events){
-			events = events.nodes(XCSG.ControlFlow_Node);
-			if(events.eval().nodes().isEmpty()){
-				throw new IllegalArgumentException("No selected control flow events");
-			}
-			final PCGComponents pcg = pcgs.get(name);
-			if(pcg == null){
-				throw new IllegalArgumentException("PCG instance no longer exists.");
-			}
-			boolean result = pcg.addControlFlowEvents(events.eval().nodes());
-			Display.getDefault().asyncExec(new Runnable(){
-				@Override
-				public void run() {
-					VIEW.refreshAll(pcg);
-					VIEW.setFocus(pcg);
-				}
-			});
-			return result;
-		}
-		
-		public boolean removeEvents(Q events){
-			events = events.nodes(XCSG.ControlFlow_Node);
-			if(events.eval().nodes().isEmpty()){
-				throw new IllegalArgumentException("No selected control flow events");
-			}
-			final PCGComponents pcg = pcgs.get(name);
-			if(pcg == null){
-				throw new IllegalArgumentException("PCG instance no longer exists.");
-			}
-			boolean result = pcg.removeControlFlowEvents(events.eval().nodes());
-			Display.getDefault().asyncExec(new Runnable(){
-				@Override
-				public void run() {
-					VIEW.refreshAll(pcg);
-					VIEW.setFocus(pcg);
-				}
-			});
-			return result;
-		}
-		
-		public void setEvents(Q events){
-			events = events.nodes(XCSG.ControlFlow_Node);
-			if(events.eval().nodes().isEmpty()){
-				throw new IllegalArgumentException("No selected control flow events");
-			}
-			final PCGComponents pcg = pcgs.get(name);
-			if(pcg == null){
-				throw new IllegalArgumentException("PCG instance no longer exists.");
-			}
-			pcg.setControlFlowEvents(events.eval().nodes());
-			Display.getDefault().asyncExec(new Runnable(){
-				@Override
-				public void run() {
-					VIEW.refreshAll(pcg);
-					VIEW.setFocus(pcg);
-				}
-			});
-		}
-		
-		@Override
-		public String toString() {
-			final PCGComponents pcg = pcgs.get(name);
-			if(pcg == null){
-				throw new IllegalArgumentException("PCG instance no longer exists.");
-			}
-			return "PCGBuilderComponents [name=" + name + ", #events=" + pcg.getControlFlowEvents().size() + "]";
-		}
-		
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((name == null) ? 0 : name.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			PCGBuilderComponents other = (PCGBuilderComponents) obj;
-			if (name == null) {
-				if (other.name != null)
-					return false;
-			} else if (!name.equals(other.name))
-				return false;
-			return true;
-		}
-	}
+	private CTabFolder pcgFolder;
+	private static Map<CTabItem, PCGComponents> tabMap = new IdentityHashMap<>();
 	
 	private Button exceptionalControlFlowCheckbox;
 	private Button extendStructureCheckbox;
@@ -199,31 +90,15 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		VIEW = this;
 	}
 	
-	private static String getUniqueName(String pcgName){
-		int suffix = 2;
-		while(pcgs.containsKey(pcgName)){
-			pcgName = pcgName + "_" + (suffix++);
-		}
-		return pcgName;
+	private static String getUniqueName(String prefix) {
+		Set<String> usedNames = pcgs.stream().map(pcg -> pcg.getName()).collect(Collectors.toSet());
+		String name;
+		do {
+			pcgCounter++;
+			name = prefix + pcgCounter;
+		} while(usedNames.contains(name));
+		return name;
 	}
-	
-	private void setFocus(PCGComponents pcg){
-		int index = 0;
-		ArrayList<PCGComponents> sortedPCGs = new ArrayList<PCGComponents>(pcgs.values());
-		Collections.sort(sortedPCGs); // sorted by creation time
-		for(PCGComponents sortedPCG : sortedPCGs){
-			if(pcg.equals(sortedPCG)){
-				break;
-			} else {
-				index++;
-			}
-		}
-		if(index <= pcgFolder.getItemCount()-1){
-			pcgFolder.setSelection(index);
-		}
-	}
-	
-	private CTabFolder pcgFolder;
 	
 	@Override
 	public void createPartControl(Composite parent) {
@@ -242,8 +117,9 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				messageBox.setText("Closing Tab");
 				int response = messageBox.open();
 				if (response == SWT.YES) {
-					String tabName = pcgFolder.getSelection().getText();
-					pcgs.remove(tabName);
+					CTabItem tab = pcgFolder.getSelection();
+					PCGComponents pcgComp = tabMap.get(tab);
+					pcgs.remove(pcgComp);
 				} else {
 					event.doit = false;
 				}
@@ -254,30 +130,21 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		
 		// create a new PCG if this is the first launch
 		if(!initialized){
-			int PCG_NUMBER = (pcgCounter++);
-			String PCG_NAME = "PCG" + PCG_NUMBER;
-			PCGComponents pcg = new PCGComponents(PCG_NAME);
-			pcgs.put(PCG_NAME, pcg);
-			addPCG(pcgFolder, pcg);
+			createPCG();
 			initialized = true;
 		} else {
 			// otherwise load what is already in memory
-			ArrayList<PCGComponents> sortedPCGs = new ArrayList<PCGComponents>(pcgs.values());
-			Collections.sort(sortedPCGs); // sorted by creation time
-			for(PCGComponents pcg : sortedPCGs){
-				addPCG(pcgFolder, pcg);
+			for(PCGComponents pcg : pcgs){
+				createTab(pcgFolder, pcg);
 			}
 		}
 		
-		// add an add PCG tab button to the action bar
+		// add an "Add PCG tab" button to the action bar
 		final Action addPCGAction = new Action() {
 			public void run() {
-				int PCG_NUMBER = (pcgCounter++);
-				String PCG_NAME = getUniqueName("PCG" + PCG_NUMBER);
-				PCGComponents pcg = new PCGComponents(PCG_NAME);
-				pcgs.put(PCG_NAME, pcg);
-				addPCG(pcgFolder, pcg);
+				createPCG();
 			}
+
 		};
 		
 		// uncomment to preview with window builder
@@ -286,7 +153,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 //		addPCG(pcgFolder, pcg);
 		
 		addPCGAction.setText("New PCG");
-		addPCGAction.setToolTipText("Creates another PCG builder tab");
+		addPCGAction.setToolTipText("Creates a new PCG builder tab");
 		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg.ui", "icons/new_configuration_button.png"));
 		addPCGAction.setImageDescriptor(newConfigurationIcon);
 		addPCGAction.setDisabledImageDescriptor(newConfigurationIcon);
@@ -296,9 +163,17 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		// add the selection event handlers
 		this.registerGraphHandlers();
 	}
+	
+	private void createPCG() {
+		String name = getUniqueName(DEFAULT_NAME);
+		PCGComponents pcg = new PCGComponents(name);
+		pcgs.add(pcg);
+		createTab(pcgFolder, pcg);
+	}
 
-	private void addPCG(final CTabFolder pcgFolder, final PCGComponents pcg) {
+	private void createTab(final CTabFolder pcgFolder, final PCGComponents pcg) {
 		final CTabItem pcgTab = new CTabItem(pcgFolder, SWT.NONE);
+		tabMap.put(pcgTab, pcg);
 		pcgTab.setText(pcg.getName());
 		
 		Composite pcgComposite = new Composite(pcgFolder, SWT.NONE);
@@ -452,17 +327,14 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 					
 					// expand search to control flow nodes that correspond to this node
 					if(controlFlowNodes.isEmpty()){
-						controlFlowNodes = Common.toQ(selection).containers().nodes(XCSG.ControlFlow_Node).eval().nodes();
+						controlFlowNodes = Common.toQ(selection).parent().nodes(XCSG.ControlFlow_Node).eval().nodes();
 					}
 					
 					if(controlFlowNodes.isEmpty()){
 						DisplayUtils.showError("Selections must correspond to control flow statements.");
 					} else {
 						if(pcg.addControlFlowEvents(controlFlowNodes)){
-							refreshControlFlowEvents(pcg);
-							refreshContainingFunctions(pcg);
-							refreshAncestorFunctions(pcg);
-							refreshExpandableFunctions(pcg);
+							refreshAll(pcg);
 						}
 					}
 				}
@@ -781,20 +653,17 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 
 	@Override
 	public void indexBecameUnaccessible() {
+		// all PCGs are invalidated
+		pcgs.clear();
+		// remove tabs
 		for(CTabItem tab : VIEW.pcgFolder.getItems()) {
-			String tabName = tab.getText();
-			pcgs.remove(tabName);
 			tab.dispose();
 		}
 	}
 
 	@Override
 	public void indexBecameAccessible() {
-		int PCG_NUMBER = 1;
-		String PCG_NAME = getUniqueName("PCG" + PCG_NUMBER);
-		PCGComponents pcg = new PCGComponents(PCG_NAME);
-		pcgs.put(PCG_NAME, pcg);
-		addPCG(pcgFolder, pcg);
+		createPCG();
 	}
 	
 }
