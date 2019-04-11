@@ -87,9 +87,10 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		private ScrolledComposite containingFunctionsScrolledComposite;
 		private ScrolledComposite ancestorFunctionsScrolledComposite;
 		private ScrolledComposite expandableFunctionsScrolledComposite;
+		private Button humanConsumerCheckbox;
 		
-		private PCGTab(final CTabFolder pcgFolder, final PCGComponents pcg) {
-			this.pcg = pcg;
+		private PCGTab(final CTabFolder pcgFolder, final PCGComponents pcgComponents) {
+			this.pcg = pcgComponents;
 			this.tab = new CTabItem(pcgFolder, SWT.NONE);
 
 			tab.setData(this);
@@ -124,6 +125,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			});
 			
 			exceptionalControlFlowCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+			exceptionalControlFlowCheckbox.setSelection(pcg.isExceptionalControlFlowEnabled());
 			exceptionalControlFlowCheckbox.setText("Exceptional Control Flow");
 			
 			exceptionalControlFlowCheckbox.addSelectionListener(new SelectionAdapter() {
@@ -133,12 +135,19 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				}
 			});
 			
-			final Button humanConsumerCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
-			humanConsumerCheckbox.setSelection(true);
+			humanConsumerCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
+			humanConsumerCheckbox.setSelection(pcg.isHumanConsumer());
 			humanConsumerCheckbox.setText("Human Consumer");
 			
+			humanConsumerCheckbox.addSelectionListener(new SelectionAdapter() {
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					pcg.setHumanConsumer(humanConsumerCheckbox.getSelection());
+				}
+			});
+			
 			extendStructureCheckbox = new Button(pcgControlPanelComposite, SWT.CHECK);
-			extendStructureCheckbox.setSelection(true);
+			extendStructureCheckbox.setSelection(pcg.isExtendStructureEnabled());
 			extendStructureCheckbox.setText("Extend Structure");
 			
 			extendStructureCheckbox.addSelectionListener(new SelectionAdapter() {
@@ -253,7 +262,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 							DisplayUtils.showError("Selections must correspond to control flow statements.");
 						} else {
 							if(pcg.addControlFlowEvents(controlFlowNodes)){
-								refreshAll(pcg);
+								refreshAll();
 							}
 						}
 					}
@@ -355,11 +364,14 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				}
 			});
 			
+			
+			refreshAll();
+			
 			// set the tab selection to this newly created tab
 			pcgFolder.setSelection(pcgFolder.getItemCount()-1);
 		}
 
-		private void refreshAncestorFunctions(final PCGComponents pcg) {
+		private void refreshAncestorFunctions() {
 			Composite ancestorFunctionsScrolledCompositeContent = new Composite(ancestorFunctionsScrolledComposite, SWT.NONE);
 			
 			for(final Node ancestorFunction : pcg.getAncestorFunctions()){
@@ -373,6 +385,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				ancestorFunctionsComposite.setLayout(new GridLayout(2, false));
 				
 				final Button includeAncestorCheckbox = new Button(ancestorFunctionsComposite, SWT.CHECK);
+				includeAncestorCheckbox.setSelection(pcg.getIncludedAncestorFunctions().contains(ancestorFunction));
 				includeAncestorCheckbox.addSelectionListener(new SelectionAdapter() {
 			        @Override
 			        public void widgetSelected(SelectionEvent event) {
@@ -382,7 +395,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			            } else {
 			            	pcg.removeIncludedAncestorFunction(ancestorFunction);
 			            }
-			            refreshExpandableFunctions(pcg);
+			            refreshExpandableFunctions();
 			        }
 			    });
 
@@ -397,7 +410,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			ancestorFunctionsScrolledComposite.setMinSize(ancestorFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 		}
 		
-		private void refreshControlFlowEvents(final PCGComponents pcg) {
+		private void refreshControlFlowEvents() {
 			Composite controlFlowEventsScrolledCompositeContent = new Composite(controlFlowEventsScrolledComposite, SWT.NONE);
 			for(final Node event : pcg.getControlFlowEvents()){
 				controlFlowEventsScrolledCompositeContent.setLayout(new GridLayout(1, false));
@@ -426,7 +439,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 					@Override
 					public void mouseUp(MouseEvent e) {
 						pcg.removeControlFlowEvent(event);
-						refreshAll(pcg);
+						refreshAll();
 					}
 				});
 			}
@@ -434,11 +447,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			controlFlowEventsScrolledComposite.setMinSize(controlFlowEventsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 		}
 		
-		private void refreshButtonStates(final PCGComponents pcg){
-			exceptionalControlFlowCheckbox.setSelection(pcg.isExceptionalControlFlowEnabled());
-		}
-		
-		private void refreshExpandableFunctions(final PCGComponents pcg) {
+		private void refreshExpandableFunctions() {
 			Composite expandableFunctionsScrolledCompositeContent = new Composite(expandableFunctionsScrolledComposite, SWT.NONE);
 
 			boolean isFirst = true;
@@ -457,6 +466,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				expandableFunctionsComposite.setLayout(new GridLayout(2, false));
 				
 				final Button expandFunctionCheckbox = new Button(expandableFunctionsComposite, SWT.CHECK);
+				expandFunctionCheckbox.setSelection(pcg.getExpandedFunctions().contains(expandableFunction));
 				expandFunctionCheckbox.addSelectionListener(new SelectionAdapter() {
 			        @Override
 			        public void widgetSelected(SelectionEvent event) {
@@ -481,7 +491,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			expandableFunctionsScrolledComposite.setMinSize(expandableFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 		}
 		
-		private void refreshContainingFunctions(final PCGComponents pcg) {
+		private void refreshContainingFunctions() {
 			Composite containingFunctionsScrolledCompositeContent = new Composite(containingFunctionsScrolledComposite, SWT.NONE);
 
 			boolean isFirst = true;
@@ -530,7 +540,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 							for(Node controlFlowEventToRemove : controlFlowNodesToRemove){
 								pcg.removeControlFlowEvent(controlFlowEventToRemove);
 							}
-							refreshAll(pcg);
+							refreshAll();
 						}
 					}
 
@@ -540,12 +550,11 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			containingFunctionsScrolledComposite.setMinSize(containingFunctionsScrolledCompositeContent.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 		}
 		
-		private void refreshAll(final PCGComponents pcg) {
-			refreshControlFlowEvents(pcg);
-			refreshContainingFunctions(pcg);
-			refreshAncestorFunctions(pcg);
-			refreshExpandableFunctions(pcg);
-			refreshButtonStates(pcg);
+		private void refreshAll() {
+			refreshControlFlowEvents();
+			refreshContainingFunctions();
+			refreshAncestorFunctions();
+			refreshExpandableFunctions();
 		}
 		
 		private AtlasSet<Node> getFilteredSelections(String... tags){

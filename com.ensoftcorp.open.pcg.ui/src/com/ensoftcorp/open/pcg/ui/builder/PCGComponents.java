@@ -15,6 +15,7 @@ public class PCGComponents {
 	private AtlasSet<Node> expandedFunctions;
 	private boolean exceptionalControlFlow;
 	private boolean extendStructure;
+	private boolean humanConsumer;
 
 	public PCGComponents(String name) {
 		this.name = name;
@@ -23,6 +24,7 @@ public class PCGComponents {
 		this.expandedFunctions = new AtlasHashSet<Node>();
 		exceptionalControlFlow = false;
 		extendStructure = true;
+		humanConsumer = true;
 	}
 	
 	public String getName() {
@@ -112,6 +114,14 @@ public class PCGComponents {
 	
 	public boolean removeControlFlowEvent(Node controlFlowEvent) {
 		return this.controlFlowEvents.remove(controlFlowEvent);
+	}
+
+	public void setHumanConsumer(boolean humanConsumer) {
+		this.humanConsumer = humanConsumer;
+	}
+	
+	public boolean isHumanConsumer() {
+		return this.humanConsumer;
 	}
 
 }
