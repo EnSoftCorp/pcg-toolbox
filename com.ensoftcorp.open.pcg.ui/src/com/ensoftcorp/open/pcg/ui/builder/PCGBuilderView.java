@@ -71,6 +71,9 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 	
 	private static boolean initialized = false;
 	private static int pcgCounter = 0;
+	/** Data model persistence. The View is a Singleton. If closed, all tabs are disposed, but the information for
+	 * constructing an IPCG is retained and restored when the view is opened again.
+	 */
 	private static List<PCGComponents> pcgs = new ArrayList<>();
 
 	private CTabFolder pcgFolder;
