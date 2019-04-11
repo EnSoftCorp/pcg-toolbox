@@ -77,7 +77,6 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 	private static List<PCGComponents> pcgs = new ArrayList<>();
 
 	private CTabFolder pcgFolder;
-	private static Map<CTabItem, PCGTab> tabMap = new IdentityHashMap<>();
 	
 	private class PCGTab {
 		private CTabItem tab;
@@ -92,7 +91,8 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		private PCGTab(final CTabFolder pcgFolder, final PCGComponents pcg) {
 			this.pcg = pcg;
 			this.tab = new CTabItem(pcgFolder, SWT.NONE);
-			
+
+			tab.setData(this);
 			tab.setText(pcg.getName());
 			
 			Composite pcgComposite = new Composite(pcgFolder, SWT.NONE);
@@ -436,7 +436,6 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 		
 		private void refreshButtonStates(final PCGComponents pcg){
 			exceptionalControlFlowCheckbox.setSelection(pcg.isExceptionalControlFlowEnabled());
-//			callGraphOverlayCheckbox.setSelection(pcg.isCallEdgeOverlayEnabled());
 		}
 		
 		private void refreshExpandableFunctions(final PCGComponents pcg) {
@@ -601,7 +600,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 				int response = messageBox.open();
 				if (response == SWT.YES) {
 					CTabItem tab = pcgFolder.getSelection();
-					PCGTab pcgTab = tabMap.remove(tab);
+					PCGTab pcgTab = (PCGTab) tab.getData();
 					PCGComponents pcgComp = pcgTab.pcg; 
 					pcgs.remove(pcgComp);
 				} else {
@@ -630,12 +629,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 			}
 
 		};
-		
-		// uncomment to preview with window builder
-//		PCGComponents pcg = new PCGComponents("TEST");
-//		pcgs.put("TEST", pcg);
-//		addPCG(pcgFolder, pcg);
-		
+				
 		addPCGAction.setText("New PCG");
 		addPCGAction.setToolTipText("Creates a new PCG builder tab");
 		ImageDescriptor newConfigurationIcon = ImageDescriptor.createFromImage(ResourceManager.getPluginImage("com.ensoftcorp.open.pcg.ui", "icons/new_configuration_button.png"));
@@ -657,8 +651,7 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 	
 	
 	private void createTab(CTabFolder folder, PCGComponents pcg) {
-		PCGTab tab = new PCGTab(folder, pcg);
-		tabMap.put(tab.tab, tab);
+		new PCGTab(folder, pcg);
 	}
 
 	@Override
@@ -670,11 +663,11 @@ public class PCGBuilderView extends GraphSelectionListenerView {
 	@Override
 	public void indexBecameUnaccessible() {
 		// remove tabs
-		tabMap.clear();
 		for(CTabItem tab : VIEW.pcgFolder.getItems()) {
 			tab.dispose();
 		}
 		// all PCGs are invalidated
+		// FIXME: if the view is closed when the index becomes unaccessible, the PCGs should be cleared the next time the view opens
 		pcgs.clear();
 	}
 
