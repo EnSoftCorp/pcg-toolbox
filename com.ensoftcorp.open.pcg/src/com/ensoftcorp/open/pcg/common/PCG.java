@@ -77,7 +77,7 @@ public class PCG {
 		public static final String PCGBackEdge = "PCGBackEdge";
 		
 		/**
-		 * Tag applied to PCG Back eges that are reentrant
+		 * Tag applied to PCG Back edges that are reentrant
 		 */
 		@XCSG_Extension
 		public static final String PCGReentryEdge = "PCGReentryEdge";
