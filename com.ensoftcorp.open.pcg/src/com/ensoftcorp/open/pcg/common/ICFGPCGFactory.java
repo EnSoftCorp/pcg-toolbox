@@ -654,6 +654,42 @@ public class ICFGPCGFactory {
 					//    default:
 					//        printf("%d\n", i);
 					//    }
+					//
+					// Update 4/24/2020: another case that triggers this is 
+					/*
+					#include <stdio.h>
+					#include <stdlib.h>
+					#define c1 1
+					#define q 0
+
+					bar(int b){
+						q--;
+						return(1);
+					}
+
+					baz(){
+						bar(1);
+						switch(c1){
+						case  1:
+							q++;
+							break;
+						default:
+							q--;
+							break;
+						}
+						return(1);
+					}
+
+					foo(){
+						baz(2);
+						if(c1){
+							bar(2);
+						} else{
+							bar(3);
+						}
+							return;
+					}
+					*/
 					throw new RuntimeException("Unhandled case for merging duplicate edges at node: " + node); //$NON-NLS-1$
 				}
 			}
