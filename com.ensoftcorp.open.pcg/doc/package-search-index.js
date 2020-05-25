@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"com.ensoftcorp.open.pcg"},{"l":"com.ensoftcorp.open.pcg.common"},{"l":"com.ensoftcorp.open.pcg.common.highlighter"},{"l":"com.ensoftcorp.open.pcg.log"},{"l":"com.ensoftcorp.open.pcg.preferences"}]
