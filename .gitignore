@@ -7,3 +7,5 @@ Thumbs.db
 hs_err_pid*
 
 bin/
+
+target/
