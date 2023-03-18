@@ -5,12 +5,12 @@
   <parent>
     <groupId>com.ensoftcorp.open</groupId>
     <artifactId>atlas-toolboxes</artifactId>
-    <version>4.2.2-SNAPSHOT</version>
+    <version>4.2.3-SNAPSHOT</version>
   </parent>
    
   <groupId>com.ensoftcorp.open</groupId>
   <artifactId>pcg</artifactId>
-  <version>4.2.2-SNAPSHOT</version>
+  <version>4.2.3-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>PCG</name>
