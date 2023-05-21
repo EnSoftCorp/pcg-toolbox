@@ -3,8 +3,3 @@ com.ensoftcorp.open.pcg.common
 com.ensoftcorp.open.pcg.common.highlighter
 com.ensoftcorp.open.pcg.log
 com.ensoftcorp.open.pcg.preferences
-com.ensoftcorp.open.pcg.ui
-com.ensoftcorp.open.pcg.ui.builder
-com.ensoftcorp.open.pcg.ui.log
-com.ensoftcorp.open.pcg.ui.preferences
-com.ensoftcorp.open.pcg.ui.smart
