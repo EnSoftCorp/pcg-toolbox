@@ -2,7 +2,7 @@
 <feature
       id="com.ensoftcorp.open.pcg.feature"
       label="PCG Toolbox"
-      version="4.2.3.qualifier"
+      version="4.2.4.qualifier"
       provider-name="EnSoft Corp.">
 
    <description url="https://ensoftcorp.github.io/pcg-toolbox">
@@ -53,11 +53,11 @@ SOFTWARE.
          version="0.0.0"/>
 
    <requires>
-      <import plugin="com.ensoftcorp.open.commons" version="4.2.3" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.commons" version="4.2.4" match="greaterOrEqual"/>
       <import plugin="org.json.simple" version="1.1.0" match="greaterOrEqual"/>
-      <import plugin="com.ensoftcorp.open.slice" version="4.2.3" match="greaterOrEqual"/>
-      <import plugin="com.ensoftcorp.open.commons.ui" version="4.2.3" match="greaterOrEqual"/>
-      <import plugin="com.ensoftcorp.open.pcg" version="4.2.3" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.slice" version="4.2.4" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.commons.ui" version="4.2.4" match="greaterOrEqual"/>
+      <import plugin="com.ensoftcorp.open.pcg" version="4.2.4" match="greaterOrEqual"/>
    </requires>
 
    <plugin
